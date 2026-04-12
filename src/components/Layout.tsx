@@ -28,7 +28,10 @@ export function Layout({ children }: LayoutProps) {
         padding: '1.5rem 0',
       }}>
         {/* Logo */}
-        <div style={{ padding: '0 1.5rem', marginBottom: '2rem' }}>
+        <div
+          onClick={() => navigate('/')}
+          style={{ padding: '0 1.5rem', marginBottom: '2rem', cursor: 'pointer' }}
+        >
           <span style={{
             fontFamily: 'var(--font-display)',
             fontSize: '1.5rem',

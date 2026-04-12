@@ -152,11 +152,11 @@ export function LoginPage() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !email.trim() || !password.trim()}
             style={{
               width: '100%',
               padding: '0.875rem',
-              background: loading ? 'var(--gray2)' : 'var(--white)',
+              background: (loading || !email.trim() || !password.trim()) ? 'var(--gray2)' : 'var(--white)',
               color: 'var(--black)',
               fontFamily: 'var(--font-label)',
               fontSize: '0.85rem',
@@ -164,7 +164,7 @@ export function LoginPage() {
               letterSpacing: '0.15em',
               textTransform: 'uppercase',
               borderRadius: 'var(--radius)',
-              cursor: loading ? 'not-allowed' : 'pointer',
+              cursor: (loading || !email.trim() || !password.trim()) ? 'not-allowed' : 'pointer',
               transition: 'background var(--transition)',
               display: 'flex',
               alignItems: 'center',
