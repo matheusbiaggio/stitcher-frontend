@@ -1,6 +1,15 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { LoginPage } from './pages/LoginPage'
+import { SettingsPage } from './pages/SettingsPage'
+import { Layout } from './components/Layout'
 import { PrivateRoute } from './components/PrivateRoute'
+import { useAuth } from './contexts/AuthContext'
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
+  if (user?.role !== 'admin') return <Navigate to="/" replace />
+  return <>{children}</>
+}
 
 export function App() {
   return (
@@ -10,9 +19,26 @@ export function App() {
         path="/"
         element={
           <PrivateRoute>
-            <div style={{ padding: '2rem', color: 'var(--white)' }}>
-              Dashboard (em breve)
-            </div>
+            <Layout>
+              <div style={{ color: 'var(--white)', fontFamily: 'var(--font-display)', fontSize: '2rem' }}>
+                DASHBOARD
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: '1rem', color: 'var(--gray)', marginTop: '0.5rem' }}>
+                  Fase 5 — em breve
+                </p>
+              </div>
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/configuracoes"
+        element={
+          <PrivateRoute>
+            <AdminRoute>
+              <Layout>
+                <SettingsPage />
+              </Layout>
+            </AdminRoute>
           </PrivateRoute>
         }
       />
