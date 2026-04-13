@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
+import { label as labelStyle, input as inputStyle, inputSmall as smallInputStyle } from '../styles/ui'
 
 interface Variant {
   id: string
@@ -94,34 +95,6 @@ function validateForm(form: CreateProductForm): FormErrors {
   return errors
 }
 
-const labelStyle = {
-  fontFamily: 'var(--font-label)',
-  fontSize: '0.75rem',
-  letterSpacing: '0.1em',
-  textTransform: 'uppercase' as const,
-  color: 'var(--gray)',
-  display: 'block',
-  marginBottom: '0.375rem',
-}
-
-const inputStyle = {
-  width: '100%',
-  padding: '0.625rem 0.875rem',
-  background: 'var(--black3)',
-  border: '1px solid var(--black4)',
-  borderRadius: 'var(--radius)',
-  color: 'var(--white)',
-  fontSize: '0.875rem',
-  fontFamily: 'var(--font-body)',
-  outline: 'none',
-  boxSizing: 'border-box' as const,
-}
-
-const smallInputStyle = {
-  ...inputStyle,
-  padding: '0.375rem 0.5rem',
-  fontSize: '0.8rem',
-}
 
 export function ProductsPage() {
   const queryClient = useQueryClient()
