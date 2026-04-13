@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { LoginPage } from './pages/LoginPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { ProductsPage } from './pages/ProductsPage'
 import { Layout } from './components/Layout'
 import { PrivateRoute } from './components/PrivateRoute'
 import { useAuth } from './contexts/AuthContext'
@@ -37,6 +38,18 @@ export function App() {
             <AdminRoute>
               <Layout>
                 <SettingsPage />
+              </Layout>
+            </AdminRoute>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/produtos"
+        element={
+          <PrivateRoute>
+            <AdminRoute>
+              <Layout>
+                <ProductsPage />
               </Layout>
             </AdminRoute>
           </PrivateRoute>

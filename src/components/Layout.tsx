@@ -45,24 +45,45 @@ export function Layout({ children }: LayoutProps) {
         {/* Navegação */}
         <nav style={{ flex: 1, padding: '0 0.75rem' }}>
           {user?.role === 'admin' && (
-            <NavLink
-              to="/configuracoes"
-              style={({ isActive }) => ({
-                display: 'block',
-                padding: '0.625rem 0.75rem',
-                borderRadius: 'var(--radius)',
-                fontFamily: 'var(--font-label)',
-                fontSize: '0.8rem',
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                color: isActive ? 'var(--white)' : 'var(--gray)',
-                background: isActive ? 'var(--black3)' : 'transparent',
-                transition: 'all var(--transition)',
-                textDecoration: 'none',
-              })}
-            >
-              Configurações
-            </NavLink>
+            <>
+              <NavLink
+                to="/produtos"
+                style={({ isActive }) => ({
+                  display: 'block',
+                  padding: '0.625rem 0.75rem',
+                  borderRadius: 'var(--radius)',
+                  fontFamily: 'var(--font-label)',
+                  fontSize: '0.8rem',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: isActive ? 'var(--white)' : 'var(--gray)',
+                  background: isActive ? 'var(--black3)' : 'transparent',
+                  transition: 'all var(--transition)',
+                  textDecoration: 'none',
+                  marginBottom: '0.25rem',
+                })}
+              >
+                Produtos
+              </NavLink>
+              <NavLink
+                to="/configuracoes"
+                style={({ isActive }) => ({
+                  display: 'block',
+                  padding: '0.625rem 0.75rem',
+                  borderRadius: 'var(--radius)',
+                  fontFamily: 'var(--font-label)',
+                  fontSize: '0.8rem',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: isActive ? 'var(--white)' : 'var(--gray)',
+                  background: isActive ? 'var(--black3)' : 'transparent',
+                  transition: 'all var(--transition)',
+                  textDecoration: 'none',
+                })}
+              >
+                Configurações
+              </NavLink>
+            </>
           )}
         </nav>
 
