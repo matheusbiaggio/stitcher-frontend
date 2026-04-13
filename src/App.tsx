@@ -2,6 +2,8 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { LoginPage } from './pages/LoginPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { ProductsPage } from './pages/ProductsPage'
+import { CustomersPage } from './pages/CustomersPage'
+import { CustomerHistoryPage } from './pages/CustomerHistoryPage'
 import { Layout } from './components/Layout'
 import { PrivateRoute } from './components/PrivateRoute'
 import { useAuth } from './contexts/AuthContext'
@@ -50,6 +52,28 @@ export function App() {
             <AdminRoute>
               <Layout>
                 <ProductsPage />
+              </Layout>
+            </AdminRoute>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/clientes"
+        element={
+          <PrivateRoute>
+            <Layout>
+              <CustomersPage />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/clientes/:id/historico"
+        element={
+          <PrivateRoute>
+            <AdminRoute>
+              <Layout>
+                <CustomerHistoryPage />
               </Layout>
             </AdminRoute>
           </PrivateRoute>
