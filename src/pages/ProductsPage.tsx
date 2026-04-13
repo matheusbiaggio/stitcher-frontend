@@ -57,8 +57,41 @@ const FORM_EMPTY: CreateProductForm = {
   variants: [],
 }
 
-function extractMessage(err: unknown): string {
-  return (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erro desconhecido'
+interface FormErrors {
+  nome?: string
+  sku?: string
+  categoria?: string
+  preco?: string
+  custo?: string
+  variants?: Record<number, string>
+}
+
+function extractApiErrors(err: unknown): FormErrors {
+  const data = (err as { response?: { data?: { errors?: Record<string, string[]> } } })?.response?.data
+  if (!data?.errors) return {}
+  const map: FormErrors = {}
+  const e = data.errors
+  if (e.nome?.length) map.nome = e.nome[0]
+  if (e.sku?.length) map.sku = e.sku[0]
+  if (e.categoria?.length) map.categoria = e.categoria[0]
+  if (e.preco?.length) map.preco = e.preco[0]
+  if (e.custo?.length) map.custo = e.custo[0]
+  return map
+}
+
+function validateForm(form: CreateProductForm): FormErrors {
+  const errors: FormErrors = {}
+  if (!form.nome.trim()) errors.nome = 'Nome é obrigatório'
+  if (!form.sku.trim()) errors.sku = 'SKU é obrigatório'
+  if (!form.categoria.trim()) errors.categoria = 'Categoria é obrigatória'
+  if (form.preco === '' || Number(form.preco) <= 0) errors.preco = 'Informe um preço de venda positivo'
+  if (form.custo !== '' && Number(form.custo) < 0) errors.custo = 'Custo não pode ser negativo'
+  const variantErrors: Record<number, string> = {}
+  form.variants.forEach((v, i) => {
+    if (!v.tamanho.trim() || !v.cor.trim()) variantErrors[i] = 'Tamanho e cor são obrigatórios'
+  })
+  if (Object.keys(variantErrors).length) errors.variants = variantErrors
+  return errors
 }
 
 const labelStyle = {
@@ -123,7 +156,7 @@ export function ProductsPage() {
   const [stockEntry, setStockEntry] = useState<{ variantId: string; productId: string; value: string } | null>(null)
   const [editingVariant, setEditingVariant] = useState<{ variantId: string; productId: string; form: EditVariantForm } | null>(null)
   const [form, setForm] = useState<CreateProductForm>(FORM_EMPTY)
-  const [formError, setFormError] = useState('')
+  const [formErrors, setFormErrors] = useState<FormErrors>({})
 
   // Variant sub-form helpers
   function addVariantRow() {
@@ -144,7 +177,12 @@ export function ProductsPage() {
 
   async function handleCreateProduct(e: FormEvent) {
     e.preventDefault()
-    setFormError('')
+    const clientErrors = validateForm(form)
+    if (Object.keys(clientErrors).length) {
+      setFormErrors(clientErrors)
+      return
+    }
+    setFormErrors({})
     const body = {
       ...form,
       preco: form.preco === '' ? 0 : Number(form.preco),
@@ -155,10 +193,10 @@ export function ProductsPage() {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['products'] })
         setForm(FORM_EMPTY)
-        setFormError('')
+        setFormErrors({})
       },
       onError: (err) => {
-        setFormError(extractMessage(err))
+        setFormErrors(extractApiErrors(err))
       },
     })
   }
@@ -285,14 +323,14 @@ export function ProductsPage() {
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
-                      <span style={{
-                        fontFamily: 'var(--font-body)',
-                        fontSize: '0.85rem',
-                        color: 'var(--white)',
-                        fontWeight: 500,
-                      }}>
-                        R$ {Number(product.preco).toFixed(2)}
-                      </span>
+                      <div style={{ textAlign: 'right' }}>
+                        <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.85rem', color: 'var(--white)', fontWeight: 500 }}>
+                          R$ {Number(product.preco).toFixed(2)}
+                        </p>
+                        <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.65rem', letterSpacing: '0.05em', color: 'var(--gray)', marginTop: '0.1rem' }}>
+                          custo R$ {Number(product.custo).toFixed(2)}
+                        </p>
+                      </div>
 
                       {!product.ativo && (
                         <span style={{
@@ -622,33 +660,33 @@ export function ProductsPage() {
               <input
                 type="text"
                 value={form.nome}
-                onChange={(e) => setForm({ ...form, nome: e.target.value })}
-                required
-                style={inputStyle}
+                onChange={(e) => { setForm({ ...form, nome: e.target.value }); setFormErrors(fe => ({ ...fe, nome: undefined })) }}
+                style={{ ...inputStyle, borderColor: formErrors.nome ? 'var(--danger)' : undefined }}
                 placeholder="Nome do produto"
               />
+              {formErrors.nome && <p style={{ color: 'var(--danger)', fontSize: '0.75rem', fontFamily: 'var(--font-body)', marginTop: '0.25rem' }}>{formErrors.nome}</p>}
             </div>
             <div>
               <label style={labelStyle}>SKU</label>
               <input
                 type="text"
                 value={form.sku}
-                onChange={(e) => setForm({ ...form, sku: e.target.value })}
-                required
-                style={inputStyle}
+                onChange={(e) => { setForm({ ...form, sku: e.target.value }); setFormErrors(fe => ({ ...fe, sku: undefined })) }}
+                style={{ ...inputStyle, borderColor: formErrors.sku ? 'var(--danger)' : undefined }}
                 placeholder="CAM-001"
               />
+              {formErrors.sku && <p style={{ color: 'var(--danger)', fontSize: '0.75rem', fontFamily: 'var(--font-body)', marginTop: '0.25rem' }}>{formErrors.sku}</p>}
             </div>
             <div>
               <label style={labelStyle}>Categoria</label>
               <input
                 type="text"
                 value={form.categoria}
-                onChange={(e) => setForm({ ...form, categoria: e.target.value })}
-                required
-                style={inputStyle}
+                onChange={(e) => { setForm({ ...form, categoria: e.target.value }); setFormErrors(fe => ({ ...fe, categoria: undefined })) }}
+                style={{ ...inputStyle, borderColor: formErrors.categoria ? 'var(--danger)' : undefined }}
                 placeholder="Roupas"
               />
+              {formErrors.categoria && <p style={{ color: 'var(--danger)', fontSize: '0.75rem', fontFamily: 'var(--font-body)', marginTop: '0.25rem' }}>{formErrors.categoria}</p>}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <div>
@@ -658,11 +696,11 @@ export function ProductsPage() {
                   step="0.01"
                   min="0"
                   value={form.preco}
-                  onChange={(e) => setForm({ ...form, preco: e.target.value === '' ? '' : Number(e.target.value) })}
-                  required
-                  style={inputStyle}
+                  onChange={(e) => { setForm({ ...form, preco: e.target.value === '' ? '' : Number(e.target.value) }); setFormErrors(fe => ({ ...fe, preco: undefined })) }}
+                  style={{ ...inputStyle, borderColor: formErrors.preco ? 'var(--danger)' : undefined }}
                   placeholder="49.90"
                 />
+                {formErrors.preco && <p style={{ color: 'var(--danger)', fontSize: '0.75rem', fontFamily: 'var(--font-body)', marginTop: '0.25rem' }}>{formErrors.preco}</p>}
               </div>
               <div>
                 <label style={labelStyle}>Custo (R$)</label>
@@ -671,10 +709,11 @@ export function ProductsPage() {
                   step="0.01"
                   min="0"
                   value={form.custo}
-                  onChange={(e) => setForm({ ...form, custo: e.target.value === '' ? '' : Number(e.target.value) })}
-                  style={inputStyle}
+                  onChange={(e) => { setForm({ ...form, custo: e.target.value === '' ? '' : Number(e.target.value) }); setFormErrors(fe => ({ ...fe, custo: undefined })) }}
+                  style={{ ...inputStyle, borderColor: formErrors.custo ? 'var(--danger)' : undefined }}
                   placeholder="20.00"
                 />
+                {formErrors.custo && <p style={{ color: 'var(--danger)', fontSize: '0.75rem', fontFamily: 'var(--font-body)', marginTop: '0.25rem' }}>{formErrors.custo}</p>}
               </div>
             </div>
             <div>
@@ -715,8 +754,8 @@ export function ProductsPage() {
               {form.variants.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {form.variants.map((row, idx) => (
+                    <div key={idx}>
                     <div
-                      key={idx}
                       style={{
                         display: 'grid',
                         gridTemplateColumns: '1fr 1fr 60px 60px auto',
@@ -725,7 +764,7 @@ export function ProductsPage() {
                         padding: '0.5rem',
                         background: 'var(--black3)',
                         borderRadius: 'var(--radius)',
-                        border: '1px solid var(--black4)',
+                        border: `1px solid ${formErrors.variants?.[idx] ? 'var(--danger)' : 'var(--black4)'}`,
                       }}
                     >
                       <div>
@@ -733,7 +772,7 @@ export function ProductsPage() {
                         <input
                           type="text"
                           value={row.tamanho}
-                          onChange={(e) => updateVariantRow(idx, 'tamanho', e.target.value)}
+                          onChange={(e) => { updateVariantRow(idx, 'tamanho', e.target.value); setFormErrors(fe => { const v = { ...fe.variants }; delete v[idx]; return { ...fe, variants: v } }) }}
                           style={smallInputStyle}
                           placeholder="M"
                         />
@@ -743,7 +782,7 @@ export function ProductsPage() {
                         <input
                           type="text"
                           value={row.cor}
-                          onChange={(e) => updateVariantRow(idx, 'cor', e.target.value)}
+                          onChange={(e) => { updateVariantRow(idx, 'cor', e.target.value); setFormErrors(fe => { const v = { ...fe.variants }; delete v[idx]; return { ...fe, variants: v } }) }}
                           style={smallInputStyle}
                           placeholder="Azul"
                         />
@@ -788,16 +827,16 @@ export function ProductsPage() {
                         ×
                       </button>
                     </div>
+                    {formErrors.variants?.[idx] && (
+                      <p style={{ color: 'var(--danger)', fontSize: '0.72rem', fontFamily: 'var(--font-body)', marginTop: '0.2rem', paddingLeft: '0.25rem' }}>
+                        {formErrors.variants[idx]}
+                      </p>
+                    )}
+                    </div>
                   ))}
                 </div>
               )}
             </div>
-
-            {formError && (
-              <p style={{ color: 'var(--danger)', fontSize: '0.8rem', fontFamily: 'var(--font-body)' }}>
-                {formError}
-              </p>
-            )}
 
             <button
               type="submit"
