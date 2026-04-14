@@ -36,9 +36,8 @@ interface CreateProductForm {
   nome: string
   sku: string
   categoria: string
-  preco: number | ''
-  custo: number | ''
-  unidade: string
+  preco: string
+  custo: string
   variants: VariantRow[]
 }
 
@@ -54,7 +53,6 @@ const FORM_EMPTY: CreateProductForm = {
   categoria: '',
   preco: '',
   custo: '',
-  unidade: 'un',
   variants: [],
 }
 
@@ -85,8 +83,8 @@ function validateForm(form: CreateProductForm): FormErrors {
   if (!form.nome.trim()) errors.nome = 'Nome é obrigatório'
   if (!form.sku.trim()) errors.sku = 'SKU é obrigatório'
   if (!form.categoria.trim()) errors.categoria = 'Categoria é obrigatória'
-  if (form.preco === '' || Number(form.preco) <= 0) errors.preco = 'Informe um preço de venda positivo'
-  if (form.custo !== '' && Number(form.custo) < 0) errors.custo = 'Custo não pode ser negativo'
+  if (!form.preco || parseFloat(form.preco) <= 0) errors.preco = 'Informe um preço de venda positivo'
+  if (form.custo && parseFloat(form.custo) < 0) errors.custo = 'Custo não pode ser negativo'
   const variantErrors: Record<number, string> = {}
   form.variants.forEach((v, i) => {
     if (!v.tamanho.trim() || !v.cor.trim()) variantErrors[i] = 'Tamanho e cor são obrigatórios'
@@ -158,8 +156,8 @@ export function ProductsPage() {
     setFormErrors({})
     const body = {
       ...form,
-      preco: form.preco === '' ? 0 : Number(form.preco),
-      custo: form.custo === '' ? 0 : Number(form.custo),
+      preco: parseFloat(form.preco) || 0,
+      custo: parseFloat(form.custo) || 0,
       variants: form.variants.filter(v => v.tamanho !== '' || v.cor !== ''),
     }
     createMutation.mutate(body, {
@@ -644,7 +642,7 @@ export function ProductsPage() {
               <input
                 type="text"
                 value={form.sku}
-                onChange={(e) => { setForm({ ...form, sku: e.target.value }); setFormErrors(fe => ({ ...fe, sku: undefined })) }}
+                onChange={(e) => { setForm({ ...form, sku: e.target.value.toUpperCase() }); setFormErrors(fe => ({ ...fe, sku: undefined })) }}
                 style={{ ...inputStyle, borderColor: formErrors.sku ? 'var(--danger)' : undefined }}
                 placeholder="CAM-001"
               />
@@ -665,11 +663,14 @@ export function ProductsPage() {
               <div>
                 <label style={labelStyle}>Preço (R$)</label>
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  type="text"
+                  inputMode="decimal"
                   value={form.preco}
-                  onChange={(e) => { setForm({ ...form, preco: e.target.value === '' ? '' : Number(e.target.value) }); setFormErrors(fe => ({ ...fe, preco: undefined })) }}
+                  onChange={(e) => { setForm({ ...form, preco: e.target.value }); setFormErrors(fe => ({ ...fe, preco: undefined })) }}
+                  onBlur={(e) => {
+                    const n = parseFloat(e.target.value.replace(',', '.'))
+                    if (!isNaN(n)) setForm(f => ({ ...f, preco: n.toFixed(2) }))
+                  }}
                   style={{ ...inputStyle, borderColor: formErrors.preco ? 'var(--danger)' : undefined }}
                   placeholder="49.90"
                 />
@@ -678,26 +679,19 @@ export function ProductsPage() {
               <div>
                 <label style={labelStyle}>Custo (R$)</label>
                 <input
-                  type="number"
-                  step="0.01"
-                  min="0"
+                  type="text"
+                  inputMode="decimal"
                   value={form.custo}
-                  onChange={(e) => { setForm({ ...form, custo: e.target.value === '' ? '' : Number(e.target.value) }); setFormErrors(fe => ({ ...fe, custo: undefined })) }}
+                  onChange={(e) => { setForm({ ...form, custo: e.target.value }); setFormErrors(fe => ({ ...fe, custo: undefined })) }}
+                  onBlur={(e) => {
+                    const n = parseFloat(e.target.value.replace(',', '.'))
+                    if (!isNaN(n)) setForm(f => ({ ...f, custo: n.toFixed(2) }))
+                  }}
                   style={{ ...inputStyle, borderColor: formErrors.custo ? 'var(--danger)' : undefined }}
                   placeholder="20.00"
                 />
                 {formErrors.custo && <p style={{ color: 'var(--danger)', fontSize: '0.75rem', fontFamily: 'var(--font-body)', marginTop: '0.25rem' }}>{formErrors.custo}</p>}
               </div>
-            </div>
-            <div>
-              <label style={labelStyle}>Unidade</label>
-              <input
-                type="text"
-                value={form.unidade}
-                onChange={(e) => setForm({ ...form, unidade: e.target.value })}
-                style={inputStyle}
-                placeholder="un"
-              />
             </div>
 
             {/* Variant sub-form */}

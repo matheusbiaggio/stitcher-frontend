@@ -38,14 +38,45 @@ function formatCurrency(value: number): string {
   return `R$ ${Number(value).toFixed(2).replace('.', ',')}`
 }
 
+/** Full Brazilian CPF check-digit validation */
+function validateCPF(cpf: string): boolean {
+  const d = cpf.replace(/\D/g, '')
+  if (d.length !== 11) return false
+  if (/^(\d)\1{10}$/.test(d)) return false // all same digit
+  let sum = 0
+  for (let i = 0; i < 9; i++) sum += parseInt(d[i]) * (10 - i)
+  let rem = sum % 11
+  const d10 = rem < 2 ? 0 : 11 - rem
+  if (parseInt(d[9]) !== d10) return false
+  sum = 0
+  for (let i = 0; i < 10; i++) sum += parseInt(d[i]) * (11 - i)
+  rem = sum % 11
+  const d11 = rem < 2 ? 0 : 11 - rem
+  return parseInt(d[10]) === d11
+}
+
+/** Brazilian phone: 10 digits (landline DDD+8) or 11 digits (mobile DDD+9XXXXXXXX) */
+function validateBRPhone(phone: string): boolean {
+  const d = phone.replace(/\D/g, '')
+  if (d.length === 10) return true
+  if (d.length === 11 && d[2] === '9') return true
+  return false
+}
+
 function validateForm(form: CustomerForm): FormErrors {
   const errors: FormErrors = {}
   if (!form.nome.trim()) errors.nome = 'Nome é obrigatório'
-  if (!form.telefone.trim()) errors.telefone = 'Telefone é obrigatório'
-  if (form.cpf && !/^\d{11}$/.test(form.cpf.replace(/\D/g, '')))
-    errors.cpf = 'CPF deve ter 11 dígitos'
-  if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-    errors.email = 'E-mail inválido'
+  if (!form.telefone.trim()) {
+    errors.telefone = 'Telefone é obrigatório'
+  } else if (!validateBRPhone(form.telefone)) {
+    errors.telefone = 'Telefone inválido — informe DDD + número (ex: 11999999999)'
+  }
+  if (form.cpf.trim()) {
+    if (!validateCPF(form.cpf)) errors.cpf = 'CPF inválido'
+  }
+  if (form.email.trim()) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = 'E-mail inválido'
+  }
   return errors
 }
 
@@ -59,6 +90,16 @@ function extractApiErrors(err: unknown): FormErrors {
   if (e.cpf?.length) map.cpf = e.cpf[0]
   if (e.email?.length) map.email = e.email[0]
   return map
+}
+
+/** Strip empty optional strings to undefined so Zod .optional() accepts them */
+function toApiBody(form: CustomerForm) {
+  return {
+    nome: form.nome,
+    telefone: form.telefone.replace(/\D/g, ''),
+    cpf: form.cpf.trim() ? form.cpf.replace(/\D/g, '') : undefined,
+    email: form.email.trim() ? form.email : undefined,
+  }
 }
 
 export function CustomersPage() {
@@ -75,12 +116,12 @@ export function CustomersPage() {
   const customers = data ?? []
 
   const createMutation = useMutation({
-    mutationFn: (body: CustomerForm) =>
+    mutationFn: (body: ReturnType<typeof toApiBody>) =>
       api.post<{ customer: Customer }>('/customers', body).then(r => r.data.customer),
   })
 
   const editMutation = useMutation({
-    mutationFn: ({ id, body }: { id: string; body: CustomerForm }) =>
+    mutationFn: ({ id, body }: { id: string; body: ReturnType<typeof toApiBody> }) =>
       api.put<{ customer: Customer }>(`/customers/${id}`, body).then(r => r.data.customer),
   })
 
@@ -94,7 +135,7 @@ export function CustomersPage() {
     const errors = validateForm(createForm)
     if (Object.keys(errors).length) { setCreateErrors(errors); return }
     setCreateErrors({})
-    createMutation.mutate(createForm, {
+    createMutation.mutate(toApiBody(createForm), {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['customers'] })
         setCreateForm(FORM_EMPTY)
@@ -107,7 +148,7 @@ export function CustomersPage() {
   function handleEditSubmit(e: FormEvent) {
     e.preventDefault()
     if (!editingId) return
-    editMutation.mutate({ id: editingId, body: editForm }, {
+    editMutation.mutate({ id: editingId, body: toApiBody(editForm) }, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['customers'] })
         setEditingId(null)
@@ -199,14 +240,14 @@ export function CustomersPage() {
                           </div>
                           <div>
                             <label style={label}>Telefone *</label>
-                            <input type="text" required value={editForm.telefone} onChange={e => setEditForm({ ...editForm, telefone: e.target.value })} style={input} />
+                            <input type="text" required value={editForm.telefone} onChange={e => setEditForm({ ...editForm, telefone: e.target.value })} style={input} placeholder="11999999999" />
                           </div>
                           <div>
-                            <label style={label}>CPF</label>
+                            <label style={label}>CPF <span style={{ color: 'var(--gray)', fontWeight: 400 }}>(opcional)</span></label>
                             <input type="text" value={editForm.cpf} onChange={e => setEditForm({ ...editForm, cpf: e.target.value })} style={input} placeholder="Somente números" />
                           </div>
                           <div>
-                            <label style={label}>E-mail</label>
+                            <label style={label}>E-mail <span style={{ color: 'var(--gray)', fontWeight: 400 }}>(opcional)</span></label>
                             <input type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} style={input} />
                           </div>
                         </div>
