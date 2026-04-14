@@ -78,13 +78,20 @@ function extractApiErrors(err: unknown): FormErrors {
   return map
 }
 
+/** Store raw digits (centavos) and display as Brazilian money: "4990" → "49,90" */
+function formatMoneyDisplay(digits: string): string {
+  const n = parseInt(digits || '0', 10)
+  const reais = Math.floor(n / 100)
+  const centavos = n % 100
+  return `${reais},${String(centavos).padStart(2, '0')}`
+}
+
 function validateForm(form: CreateProductForm): FormErrors {
   const errors: FormErrors = {}
   if (!form.nome.trim()) errors.nome = 'Nome é obrigatório'
   if (!form.sku.trim()) errors.sku = 'SKU é obrigatório'
   if (!form.categoria.trim()) errors.categoria = 'Categoria é obrigatória'
-  if (!form.preco || parseFloat(form.preco) <= 0) errors.preco = 'Informe um preço de venda positivo'
-  if (form.custo && parseFloat(form.custo) < 0) errors.custo = 'Custo não pode ser negativo'
+  if (!form.preco || parseInt(form.preco) <= 0) errors.preco = 'Informe um preço de venda positivo'
   const variantErrors: Record<number, string> = {}
   form.variants.forEach((v, i) => {
     if (!v.tamanho.trim() || !v.cor.trim()) variantErrors[i] = 'Tamanho e cor são obrigatórios'
@@ -156,8 +163,8 @@ export function ProductsPage() {
     setFormErrors({})
     const body = {
       ...form,
-      preco: parseFloat(form.preco) || 0,
-      custo: parseFloat(form.custo) || 0,
+      preco: parseInt(form.preco || '0') / 100,
+      custo: parseInt(form.custo || '0') / 100,
       variants: form.variants.filter(v => v.tamanho !== '' || v.cor !== ''),
     }
     createMutation.mutate(body, {
@@ -664,15 +671,15 @@ export function ProductsPage() {
                 <label style={labelStyle}>Preço (R$)</label>
                 <input
                   type="text"
-                  inputMode="decimal"
-                  value={form.preco}
-                  onChange={(e) => { setForm({ ...form, preco: e.target.value }); setFormErrors(fe => ({ ...fe, preco: undefined })) }}
-                  onBlur={(e) => {
-                    const n = parseFloat(e.target.value.replace(',', '.'))
-                    if (!isNaN(n)) setForm(f => ({ ...f, preco: n.toFixed(2) }))
+                  inputMode="numeric"
+                  value={formatMoneyDisplay(form.preco)}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, '')
+                    setForm(f => ({ ...f, preco: digits }))
+                    setFormErrors(fe => ({ ...fe, preco: undefined }))
                   }}
                   style={{ ...inputStyle, borderColor: formErrors.preco ? 'var(--danger)' : undefined }}
-                  placeholder="49.90"
+                  placeholder="0,00"
                 />
                 {formErrors.preco && <p style={{ color: 'var(--danger)', fontSize: '0.75rem', fontFamily: 'var(--font-body)', marginTop: '0.25rem' }}>{formErrors.preco}</p>}
               </div>
@@ -680,15 +687,15 @@ export function ProductsPage() {
                 <label style={labelStyle}>Custo (R$)</label>
                 <input
                   type="text"
-                  inputMode="decimal"
-                  value={form.custo}
-                  onChange={(e) => { setForm({ ...form, custo: e.target.value }); setFormErrors(fe => ({ ...fe, custo: undefined })) }}
-                  onBlur={(e) => {
-                    const n = parseFloat(e.target.value.replace(',', '.'))
-                    if (!isNaN(n)) setForm(f => ({ ...f, custo: n.toFixed(2) }))
+                  inputMode="numeric"
+                  value={formatMoneyDisplay(form.custo)}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, '')
+                    setForm(f => ({ ...f, custo: digits }))
+                    setFormErrors(fe => ({ ...fe, custo: undefined }))
                   }}
                   style={{ ...inputStyle, borderColor: formErrors.custo ? 'var(--danger)' : undefined }}
-                  placeholder="20.00"
+                  placeholder="0,00"
                 />
                 {formErrors.custo && <p style={{ color: 'var(--danger)', fontSize: '0.75rem', fontFamily: 'var(--font-body)', marginTop: '0.25rem' }}>{formErrors.custo}</p>}
               </div>
