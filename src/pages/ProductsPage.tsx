@@ -111,7 +111,7 @@ export function ProductsPage() {
   const products = data ?? []
 
   const createMutation = useMutation({
-    mutationFn: (body: CreateProductForm) =>
+    mutationFn: (body: Omit<CreateProductForm, 'preco' | 'custo'> & { preco: number; custo: number }) =>
       api.post<{ product: Product }>('/products', body).then(r => r.data.product),
   })
 
