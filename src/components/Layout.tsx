@@ -44,6 +44,27 @@ export function Layout({ children }: LayoutProps) {
 
         {/* Navegação */}
         <nav style={{ flex: 1, padding: '0 0.75rem' }}>
+          {/* PDV — acessível por todos os usuários autenticados */}
+          <NavLink
+            to="/pdv"
+            style={({ isActive }) => ({
+              display: 'block',
+              padding: '0.625rem 0.75rem',
+              borderRadius: 'var(--radius)',
+              fontFamily: 'var(--font-label)',
+              fontSize: '0.8rem',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase' as const,
+              color: isActive ? 'var(--white)' : 'var(--gray)',
+              background: isActive ? 'var(--black3)' : 'transparent',
+              transition: 'all var(--transition)',
+              textDecoration: 'none',
+              marginBottom: '0.25rem',
+            })}
+          >
+            PDV
+          </NavLink>
+
           {/* Clientes — acessível por todos os usuários autenticados */}
           <NavLink
             to="/clientes"
@@ -66,6 +87,44 @@ export function Layout({ children }: LayoutProps) {
           </NavLink>
           {user?.role === 'admin' && (
             <>
+              <NavLink
+                to="/vendas"
+                style={({ isActive }) => ({
+                  display: 'block',
+                  padding: '0.625rem 0.75rem',
+                  borderRadius: 'var(--radius)',
+                  fontFamily: 'var(--font-label)',
+                  fontSize: '0.8rem',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: isActive ? 'var(--white)' : 'var(--gray)',
+                  background: isActive ? 'var(--black3)' : 'transparent',
+                  transition: 'all var(--transition)',
+                  textDecoration: 'none',
+                  marginBottom: '0.25rem',
+                })}
+              >
+                Vendas
+              </NavLink>
+              <NavLink
+                to="/crediario"
+                style={({ isActive }) => ({
+                  display: 'block',
+                  padding: '0.625rem 0.75rem',
+                  borderRadius: 'var(--radius)',
+                  fontFamily: 'var(--font-label)',
+                  fontSize: '0.8rem',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: isActive ? 'var(--white)' : 'var(--gray)',
+                  background: isActive ? 'var(--black3)' : 'transparent',
+                  transition: 'all var(--transition)',
+                  textDecoration: 'none',
+                  marginBottom: '0.25rem',
+                })}
+              >
+                Crediário
+              </NavLink>
               <NavLink
                 to="/produtos"
                 style={({ isActive }) => ({

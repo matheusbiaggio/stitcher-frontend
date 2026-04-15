@@ -4,6 +4,9 @@ import { SettingsPage } from './pages/SettingsPage'
 import { ProductsPage } from './pages/ProductsPage'
 import { CustomersPage } from './pages/CustomersPage'
 import { CustomerHistoryPage } from './pages/CustomerHistoryPage'
+import { PdvPage } from './pages/PdvPage'
+import { SalesPage } from './pages/SalesPage'
+import { CrediarioPage } from './pages/CrediarioPage'
 import { Layout } from './components/Layout'
 import { PrivateRoute } from './components/PrivateRoute'
 import { useAuth } from './contexts/AuthContext'
@@ -74,6 +77,40 @@ export function App() {
             <AdminRoute>
               <Layout>
                 <CustomerHistoryPage />
+              </Layout>
+            </AdminRoute>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/pdv"
+        element={
+          <PrivateRoute>
+            <Layout>
+              <PdvPage />
+            </Layout>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/vendas"
+        element={
+          <PrivateRoute>
+            <AdminRoute>
+              <Layout>
+                <SalesPage />
+              </Layout>
+            </AdminRoute>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/crediario"
+        element={
+          <PrivateRoute>
+            <AdminRoute>
+              <Layout>
+                <CrediarioPage />
               </Layout>
             </AdminRoute>
           </PrivateRoute>
