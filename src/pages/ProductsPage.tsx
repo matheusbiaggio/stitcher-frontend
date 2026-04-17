@@ -47,6 +47,27 @@ interface EditVariantForm {
   estoqueMinimo: number | ''
 }
 
+interface EditProductForm {
+  nome: string
+  sku: string
+  categoria: string
+  preco: string  // centavos digits
+  custo: string  // centavos digits
+}
+
+interface NewVariantForm {
+  tamanho: string
+  cor: string
+  estoque: number | ''
+  estoqueMinimo: number | ''
+}
+
+function priceToCentavos(price: number): string {
+  return String(Math.round(price * 100))
+}
+
+const NEW_VARIANT_EMPTY: NewVariantForm = { tamanho: '', cor: '', estoque: 0, estoqueMinimo: 0 }
+
 const FORM_EMPTY: CreateProductForm = {
   nome: '',
   sku: '',
@@ -129,12 +150,77 @@ export function ProductsPage() {
       api.put<{ variant: Variant }>(`/products/${productId}/variants/${variantId}`, data).then(r => r.data.variant),
   })
 
+  const updateProductMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { nome: string; sku: string; categoria: string; preco: number; custo: number } }) =>
+      api.put<{ product: Product }>(`/products/${id}`, data).then(r => r.data.product),
+  })
+
+  const addVariantMutation = useMutation({
+    mutationFn: ({ productId, data }: { productId: string; data: NewVariantForm }) =>
+      api.post<{ variant: Variant }>(`/products/${productId}/variants`, data).then(r => r.data.variant),
+  })
+
   // UI state
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [stockEntry, setStockEntry] = useState<{ variantId: string; productId: string; value: string } | null>(null)
   const [editingVariant, setEditingVariant] = useState<{ variantId: string; productId: string; form: EditVariantForm } | null>(null)
+  const [editingProduct, setEditingProduct] = useState<{ id: string; form: EditProductForm } | null>(null)
+  const [addingVariantTo, setAddingVariantTo] = useState<string | null>(null)
+  const [newVariantForm, setNewVariantForm] = useState<NewVariantForm>(NEW_VARIANT_EMPTY)
   const [form, setForm] = useState<CreateProductForm>(FORM_EMPTY)
   const [formErrors, setFormErrors] = useState<FormErrors>({})
+
+  function openEditProduct(product: Product) {
+    setEditingProduct({
+      id: product.id,
+      form: {
+        nome: product.nome,
+        sku: product.sku,
+        categoria: product.categoria,
+        preco: priceToCentavos(product.preco),
+        custo: priceToCentavos(product.custo),
+      },
+    })
+  }
+
+  function handleUpdateProduct(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editingProduct) return
+    const { form: f } = editingProduct
+    updateProductMutation.mutate(
+      {
+        id: editingProduct.id,
+        data: {
+          nome: f.nome,
+          sku: f.sku,
+          categoria: f.categoria,
+          preco: parseInt(f.preco || '0') / 100,
+          custo: parseInt(f.custo || '0') / 100,
+        },
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ['products'] })
+          setEditingProduct(null)
+        },
+      }
+    )
+  }
+
+  function handleAddVariantSubmit(e: React.FormEvent, productId: string) {
+    e.preventDefault()
+    if (!newVariantForm.tamanho.trim() || !newVariantForm.cor.trim()) return
+    addVariantMutation.mutate(
+      { productId, data: newVariantForm },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ['products'] })
+          setAddingVariantTo(null)
+          setNewVariantForm(NEW_VARIANT_EMPTY)
+        },
+      }
+    )
+  }
 
   // Variant sub-form helpers
   function addVariantRow() {
@@ -325,6 +411,31 @@ export function ProductsPage() {
                         </span>
                       )}
 
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (editingProduct?.id === product.id) {
+                            setEditingProduct(null)
+                          } else {
+                            openEditProduct(product)
+                          }
+                        }}
+                        style={{
+                          padding: '0.3rem 0.6rem',
+                          background: 'transparent',
+                          border: '1px solid var(--black4)',
+                          borderRadius: 'var(--radius)',
+                          color: editingProduct?.id === product.id ? 'var(--white)' : 'var(--gray)',
+                          fontFamily: 'var(--font-label)',
+                          fontSize: '0.65rem',
+                          letterSpacing: '0.1em',
+                          textTransform: 'uppercase',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {editingProduct?.id === product.id ? 'Fechar' : 'Editar'}
+                      </button>
+
                       {product.ativo && (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDeactivate(product.id) }}
@@ -352,6 +463,116 @@ export function ProductsPage() {
                     </div>
                   </div>
 
+                  {/* Inline product edit form */}
+                  {editingProduct?.id === product.id && (
+                    <form onSubmit={handleUpdateProduct} style={{
+                      borderTop: '1px solid var(--black4)',
+                      padding: '0.875rem 1rem',
+                      background: 'var(--black3)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.75rem',
+                    }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.625rem' }}>
+                        <div>
+                          <label style={{ ...labelStyle, fontSize: '0.65rem' }}>Nome</label>
+                          <input
+                            type="text"
+                            value={editingProduct.form.nome}
+                            onChange={e => setEditingProduct({ ...editingProduct, form: { ...editingProduct.form, nome: e.target.value } })}
+                            style={inputStyle}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label style={{ ...labelStyle, fontSize: '0.65rem' }}>SKU</label>
+                          <input
+                            type="text"
+                            value={editingProduct.form.sku}
+                            onChange={e => setEditingProduct({ ...editingProduct, form: { ...editingProduct.form, sku: e.target.value.toUpperCase() } })}
+                            style={inputStyle}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label style={{ ...labelStyle, fontSize: '0.65rem' }}>Categoria</label>
+                          <input
+                            type="text"
+                            value={editingProduct.form.categoria}
+                            onChange={e => setEditingProduct({ ...editingProduct, form: { ...editingProduct.form, categoria: e.target.value } })}
+                            style={inputStyle}
+                            required
+                          />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                          <div>
+                            <label style={{ ...labelStyle, fontSize: '0.65rem' }}>Preço (R$)</label>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              value={formatMoneyDisplay(editingProduct.form.preco)}
+                              onChange={e => {
+                                const digits = e.target.value.replace(/\D/g, '')
+                                setEditingProduct({ ...editingProduct, form: { ...editingProduct.form, preco: digits } })
+                              }}
+                              style={inputStyle}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ ...labelStyle, fontSize: '0.65rem' }}>Custo (R$)</label>
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              value={formatMoneyDisplay(editingProduct.form.custo)}
+                              onChange={e => {
+                                const digits = e.target.value.replace(/\D/g, '')
+                                setEditingProduct({ ...editingProduct, form: { ...editingProduct.form, custo: digits } })
+                              }}
+                              style={inputStyle}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          type="submit"
+                          disabled={updateProductMutation.isPending}
+                          style={{
+                            padding: '0.5rem 1.25rem',
+                            background: updateProductMutation.isPending ? 'var(--gray2)' : 'var(--white)',
+                            color: 'var(--black)',
+                            fontFamily: 'var(--font-label)',
+                            fontSize: '0.7rem',
+                            letterSpacing: '0.1em',
+                            textTransform: 'uppercase',
+                            border: 'none',
+                            borderRadius: 'var(--radius)',
+                            cursor: updateProductMutation.isPending ? 'not-allowed' : 'pointer',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {updateProductMutation.isPending ? 'Salvando...' : 'Salvar'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingProduct(null)}
+                          style={{
+                            padding: '0.5rem 1rem',
+                            background: 'transparent',
+                            border: '1px solid var(--black4)',
+                            borderRadius: 'var(--radius)',
+                            color: 'var(--gray)',
+                            fontFamily: 'var(--font-label)',
+                            fontSize: '0.7rem',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </form>
+                  )}
+
                   {/* Expanded variant rows */}
                   {expandedId === product.id && (
                     <div style={{
@@ -359,11 +580,11 @@ export function ProductsPage() {
                       padding: '0.75rem 1rem',
                       background: 'var(--black)',
                     }}>
-                      {product.variants.length === 0 ? (
-                        <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.8rem' }}>Sem variantes.</p>
-                      ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                          {product.variants.map((variant) => (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {product.variants.length === 0 && (
+                          <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.8rem' }}>Sem variantes.</p>
+                        )}
+                        {product.variants.map((variant) => (
                             <div key={variant.id}>
                               {/* Variant row */}
                               <div style={{
@@ -604,8 +825,130 @@ export function ProductsPage() {
                               )}
                             </div>
                           ))}
+
+                        {/* Add variant button + inline form */}
+                        <div>
+                          {addingVariantTo !== product.id ? (
+                            <button
+                              onClick={() => { setAddingVariantTo(product.id); setNewVariantForm(NEW_VARIANT_EMPTY) }}
+                              style={{
+                                padding: '0.3rem 0.75rem',
+                                background: 'transparent',
+                                border: '1px solid var(--black4)',
+                                borderRadius: 'var(--radius)',
+                                color: 'var(--gray)',
+                                fontFamily: 'var(--font-label)',
+                                fontSize: '0.65rem',
+                                letterSpacing: '0.08em',
+                                textTransform: 'uppercase',
+                                cursor: 'pointer',
+                                marginTop: product.variants.length > 0 ? '0.25rem' : 0,
+                              }}
+                            >
+                              + Variante
+                            </button>
+                          ) : (
+                            <form
+                              onSubmit={(e) => handleAddVariantSubmit(e, product.id)}
+                              style={{
+                                display: 'flex',
+                                gap: '0.5rem',
+                                alignItems: 'flex-end',
+                                flexWrap: 'wrap',
+                                padding: '0.5rem 0.75rem',
+                                background: 'var(--black3)',
+                                borderRadius: 'var(--radius)',
+                                border: '1px solid var(--black4)',
+                                marginTop: '0.25rem',
+                              }}
+                            >
+                              <div>
+                                <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>Tamanho *</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={newVariantForm.tamanho}
+                                  onChange={e => setNewVariantForm(f => ({ ...f, tamanho: e.target.value }))}
+                                  style={{ ...smallInputStyle, width: '80px' }}
+                                  autoFocus
+                                  placeholder="M"
+                                />
+                              </div>
+                              <div>
+                                <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>Cor *</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={newVariantForm.cor}
+                                  onChange={e => setNewVariantForm(f => ({ ...f, cor: e.target.value }))}
+                                  style={{ ...smallInputStyle, width: '100px' }}
+                                  placeholder="Azul"
+                                />
+                              </div>
+                              <div>
+                                <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>Estq. inicial</label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={newVariantForm.estoque}
+                                  onChange={e => setNewVariantForm(f => ({ ...f, estoque: e.target.value === '' ? '' : Number(e.target.value) }))}
+                                  style={{ ...smallInputStyle, width: '70px' }}
+                                  placeholder="0"
+                                />
+                              </div>
+                              <div>
+                                <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>Mín.</label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={newVariantForm.estoqueMinimo}
+                                  onChange={e => setNewVariantForm(f => ({ ...f, estoqueMinimo: e.target.value === '' ? '' : Number(e.target.value) }))}
+                                  style={{ ...smallInputStyle, width: '60px' }}
+                                  placeholder="0"
+                                />
+                              </div>
+                              <button
+                                type="submit"
+                                disabled={addVariantMutation.isPending}
+                                style={{
+                                  padding: '0.375rem 0.75rem',
+                                  background: 'var(--white)',
+                                  color: 'var(--black)',
+                                  fontFamily: 'var(--font-label)',
+                                  fontSize: '0.65rem',
+                                  letterSpacing: '0.1em',
+                                  textTransform: 'uppercase',
+                                  border: 'none',
+                                  borderRadius: 'var(--radius)',
+                                  cursor: 'pointer',
+                                  fontWeight: 600,
+                                  whiteSpace: 'nowrap',
+                                  alignSelf: 'flex-end',
+                                }}
+                              >
+                                {addVariantMutation.isPending ? '...' : 'Adicionar'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setAddingVariantTo(null)}
+                                style={{
+                                  padding: '0.375rem 0.5rem',
+                                  background: 'transparent',
+                                  border: '1px solid var(--black4)',
+                                  borderRadius: 'var(--radius)',
+                                  color: 'var(--gray)',
+                                  fontFamily: 'var(--font-label)',
+                                  fontSize: '0.65rem',
+                                  cursor: 'pointer',
+                                  alignSelf: 'flex-end',
+                                }}
+                              >
+                                ×
+                              </button>
+                            </form>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
                   )}
                 </div>
