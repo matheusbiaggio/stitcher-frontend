@@ -53,11 +53,12 @@ export function PdvPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
-  // Load full catalog on mount — filter client-side
+  // Load full catalog — always refetch on mount so newly added products appear immediately
   const { data: allProductsData, isPending: catalogLoading } = useQuery({
     queryKey: ['pdv-catalog'],
     queryFn: () => api.get<{ products: Product[] }>('/products').then(r => r.data.products),
-    staleTime: 60_000,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
   const allProducts = (allProductsData ?? []).filter(p => (p as Product & { ativo?: boolean }).ativo !== false)
 
@@ -77,7 +78,7 @@ export function PdvPage() {
   const { data: customersData } = useQuery({
     queryKey: ['customers-search', customerSearch],
     queryFn: () => api.get<{ customers: CustomerResult[] }>('/customers/search?q=' + customerSearch).then(r => r.data.customers),
-    enabled: customerSearch.length > 1 && formaPagamento === 'CREDIARIO',
+    enabled: customerSearch.length > 1,
     staleTime: 10_000,
   })
   const customerResults = customersData ?? []
@@ -351,62 +352,66 @@ export function PdvPage() {
               </div>
             </div>
 
-            {/* Customer search — only for CREDIARIO */}
-            {formaPagamento === 'CREDIARIO' && (
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={label}>Cliente (Crediário)</label>
-                {selectedCustomer ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--black3)', border: '1px solid var(--black4)', borderRadius: 'var(--radius)', padding: '0.5rem 0.75rem' }}>
-                    <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--white)' }}>{selectedCustomer.nome}</span>
-                    <button onClick={() => { setSelectedCustomer(null); setCustomerSearch('') }} style={{ ...rowActionButton, fontSize: '0.65rem' }}>Trocar</button>
-                  </div>
-                ) : (
-                  <>
-                    <input
-                      type="text"
-                      placeholder="Nome, telefone ou CPF..."
-                      value={customerSearch}
-                      onChange={e => setCustomerSearch(e.target.value)}
-                      style={{ ...input, marginBottom: '0.5rem' }}
-                    />
-                    {customerResults.length > 0 && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                        {customerResults.map(c => (
-                          <button
-                            key={c.id}
-                            onClick={() => { setSelectedCustomer({ id: c.id, nome: c.nome }); setCustomerSearch('') }}
-                            style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              padding: '0.5rem 0.75rem',
-                              background: 'var(--black3)',
-                              border: '1px solid var(--black4)',
-                              borderRadius: 'var(--radius)',
-                              color: 'var(--white)',
-                              fontFamily: 'var(--font-body)',
-                              fontSize: '0.8rem',
-                              cursor: 'pointer',
-                              textAlign: 'left',
-                            }}
-                          >
-                            <span>{c.nome}</span>
-                            {c.saldoDevedor > 0 && (
-                              <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.65rem', color: 'var(--danger)' }}>
-                                Saldo: {formatMoney(c.saldoDevedor)}
-                              </span>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    {customerSearch.length > 1 && customerResults.length === 0 && (
-                      <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.8rem' }}>Nenhum cliente encontrado</p>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
+            {/* Customer link — optional for all, required for Crediário */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label style={label}>
+                Cliente{' '}
+                {formaPagamento === 'CREDIARIO'
+                  ? <span style={{ color: 'var(--danger)', fontWeight: 600 }}>*</span>
+                  : <span style={{ color: 'var(--gray)', fontWeight: 400 }}>(opcional)</span>
+                }
+              </label>
+              {selectedCustomer ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--black3)', border: '1px solid var(--black4)', borderRadius: 'var(--radius)', padding: '0.5rem 0.75rem' }}>
+                  <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--white)' }}>{selectedCustomer.nome}</span>
+                  <button onClick={() => { setSelectedCustomer(null); setCustomerSearch('') }} style={{ ...rowActionButton, fontSize: '0.65rem' }}>Trocar</button>
+                </div>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    placeholder="Nome, telefone ou CPF..."
+                    value={customerSearch}
+                    onChange={e => setCustomerSearch(e.target.value)}
+                    style={{ ...input, marginBottom: '0.5rem' }}
+                  />
+                  {customerResults.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      {customerResults.map(c => (
+                        <button
+                          key={c.id}
+                          onClick={() => { setSelectedCustomer({ id: c.id, nome: c.nome }); setCustomerSearch('') }}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '0.5rem 0.75rem',
+                            background: 'var(--black3)',
+                            border: '1px solid var(--black4)',
+                            borderRadius: 'var(--radius)',
+                            color: 'var(--white)',
+                            fontFamily: 'var(--font-body)',
+                            fontSize: '0.8rem',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                          }}
+                        >
+                          <span>{c.nome}</span>
+                          {c.saldoDevedor > 0 && (
+                            <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.65rem', color: 'var(--danger)' }}>
+                              Saldo: {formatMoney(c.saldoDevedor)}
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {customerSearch.length > 1 && customerResults.length === 0 && (
+                    <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.8rem' }}>Nenhum cliente encontrado</p>
+                  )}
+                </>
+              )}
+            </div>
 
             {/* Total */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--black4)', paddingTop: '1rem', marginBottom: '1rem' }}>
