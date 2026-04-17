@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import {
@@ -46,39 +46,38 @@ function formatMoney(value: number): string {
 
 export function PdvPage() {
   const [searchInput, setSearchInput] = useState('')
-  const [debouncedQuery, setDebouncedQuery] = useState('')
   const [cart, setCart] = useState<CartItem[]>([])
   const [formaPagamento, setFormaPagamento] = useState<FormaPagamento | null>(null)
   const [customerSearch, setCustomerSearch] = useState('')
-  const [debouncedCustomerQuery, setDebouncedCustomerQuery] = useState('')
   const [selectedCustomer, setSelectedCustomer] = useState<{ id: string; nome: string } | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
-  // Debounce product search
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedQuery(searchInput), 300)
-    return () => clearTimeout(timer)
-  }, [searchInput])
-
-  // Debounce customer search
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedCustomerQuery(customerSearch), 300)
-    return () => clearTimeout(timer)
-  }, [customerSearch])
-
-  const { data: productsData } = useQuery({
-    queryKey: ['products-search', debouncedQuery],
-    queryFn: () => api.get<{ products: Product[] }>('/products/search?q=' + debouncedQuery).then(r => r.data.products),
-    enabled: debouncedQuery.length > 1,
-    staleTime: 30_000,
+  // Load full catalog on mount — filter client-side
+  const { data: allProductsData, isPending: catalogLoading } = useQuery({
+    queryKey: ['pdv-catalog'],
+    queryFn: () => api.get<{ products: Product[] }>('/products').then(r => r.data.products),
+    staleTime: 60_000,
   })
-  const products = productsData ?? []
+  const allProducts = (allProductsData ?? []).filter(p => (p as Product & { ativo?: boolean }).ativo !== false)
+
+  // Client-side filter: match nome, SKU, tamanho, cor
+  const q = searchInput.trim().toLowerCase()
+  const products = q.length === 0
+    ? allProducts
+    : allProducts.filter(p =>
+        p.nome.toLowerCase().includes(q) ||
+        p.sku.toLowerCase().includes(q) ||
+        p.variants.some(v =>
+          v.tamanho.toLowerCase().includes(q) ||
+          v.cor.toLowerCase().includes(q)
+        )
+      )
 
   const { data: customersData } = useQuery({
-    queryKey: ['customers-search', debouncedCustomerQuery],
-    queryFn: () => api.get<{ customers: CustomerResult[] }>('/customers/search?q=' + debouncedCustomerQuery).then(r => r.data.customers),
-    enabled: debouncedCustomerQuery.length > 1 && formaPagamento === 'CREDIARIO',
+    queryKey: ['customers-search', customerSearch],
+    queryFn: () => api.get<{ customers: CustomerResult[] }>('/customers/search?q=' + customerSearch).then(r => r.data.customers),
+    enabled: customerSearch.length > 1 && formaPagamento === 'CREDIARIO',
     staleTime: 10_000,
   })
   const customerResults = customersData ?? []
@@ -162,7 +161,6 @@ export function PdvPage() {
       onSuccess: () => {
         setCart([])
         setSearchInput('')
-        setDebouncedQuery('')
         setSelectedCustomer(null)
         setCustomerSearch('')
         setFormaPagamento(null)
@@ -187,70 +185,85 @@ export function PdvPage() {
       <h1 style={pageTitle}>PDV — CAIXA</h1>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 420px', gap: '1.5rem', alignItems: 'start' }}>
-        {/* Left column — product search + results */}
+        {/* Left column — catalog + filter */}
         <section>
-          <h2 style={sectionHeader}>Buscar produto</h2>
+          <h2 style={sectionHeader}>Catálogo</h2>
           <input
             type="text"
-            placeholder="Nome ou SKU..."
+            placeholder="Filtrar por nome, SKU, tamanho ou cor..."
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
             style={{ ...input, marginBottom: '1rem' }}
             autoFocus
           />
 
-          {products.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {products.map(product => (
-                <div key={product.id} style={card}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                    <div>
-                      <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.9rem', color: 'var(--white)', fontWeight: 500, marginBottom: '0.2rem' }}>
-                        {product.nome}
-                      </p>
-                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          {catalogLoading ? (
+            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.875rem' }}>Carregando catálogo...</p>
+          ) : products.length === 0 ? (
+            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.875rem' }}>
+              {q.length > 0 ? `Nenhum produto encontrado para "${searchInput}"` : 'Nenhum produto cadastrado.'}
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+              {products.map(product => {
+                const availableVariants = product.variants.filter(v => v.estoque > 0)
+                return (
+                  <div key={product.id} style={{
+                    ...card,
+                    display: 'grid',
+                    gridTemplateColumns: '1fr auto',
+                    gap: '0.75rem',
+                    alignItems: 'center',
+                    opacity: availableVariants.length === 0 ? 0.45 : 1,
+                  }}>
+                    {/* Product info */}
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--white)', fontWeight: 500 }}>
+                          {product.nome}
+                        </span>
                         <span style={badge('info')}>{product.sku}</span>
-                        <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', color: 'var(--success)' }}>
+                        <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', color: 'var(--success)', letterSpacing: '0.05em' }}>
                           {formatMoney(product.preco)}
                         </span>
                       </div>
+                      <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+                        {availableVariants.length === 0 ? (
+                          <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.65rem', color: 'var(--gray)', letterSpacing: '0.05em' }}>
+                            SEM ESTOQUE
+                          </span>
+                        ) : (
+                          availableVariants.map(variant => (
+                            <button
+                              key={variant.id}
+                              onClick={() => addToCart(variant, product)}
+                              style={{
+                                padding: '0.25rem 0.6rem',
+                                background: 'var(--black3)',
+                                border: '1px solid var(--black4)',
+                                borderRadius: 'var(--radius)',
+                                color: 'var(--white)',
+                                fontFamily: 'var(--font-label)',
+                                fontSize: '0.65rem',
+                                letterSpacing: '0.08em',
+                                cursor: 'pointer',
+                                textTransform: 'uppercase',
+                                transition: 'border-color 0.1s',
+                              }}
+                              onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--gray)')}
+                              onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--black4)')}
+                            >
+                              {variant.tamanho && `${variant.tamanho} `}{variant.cor}
+                              <span style={{ color: 'var(--gray)', marginLeft: '0.3rem' }}>({variant.estoque})</span>
+                            </button>
+                          ))
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    {product.variants.filter(v => v.estoque > 0).map(variant => (
-                      <button
-                        key={variant.id}
-                        onClick={() => addToCart(variant, product)}
-                        style={{
-                          padding: '0.3rem 0.75rem',
-                          background: 'var(--black3)',
-                          border: '1px solid var(--black4)',
-                          borderRadius: 'var(--radius)',
-                          color: 'var(--white)',
-                          fontFamily: 'var(--font-label)',
-                          fontSize: '0.7rem',
-                          letterSpacing: '0.08em',
-                          cursor: 'pointer',
-                          textTransform: 'uppercase',
-                        }}
-                      >
-                        {variant.tamanho} / {variant.cor}
-                        <span style={{ color: 'var(--gray)', marginLeft: '0.4rem' }}>({variant.estoque})</span>
-                      </button>
-                    ))}
-                    {product.variants.filter(v => v.estoque === 0).length > 0 && product.variants.filter(v => v.estoque > 0).length === 0 && (
-                      <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.8rem', color: 'var(--gray)' }}>Sem estoque disponível</span>
-                    )}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
-          )}
-
-          {debouncedQuery.length > 1 && products.length === 0 && (
-            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.875rem' }}>
-              Nenhum produto encontrado para "{debouncedQuery}"
-            </p>
           )}
         </section>
 
@@ -387,7 +400,7 @@ export function PdvPage() {
                         ))}
                       </div>
                     )}
-                    {debouncedCustomerQuery.length > 1 && customerResults.length === 0 && (
+                    {customerSearch.length > 1 && customerResults.length === 0 && (
                       <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.8rem' }}>Nenhum cliente encontrado</p>
                     )}
                   </>
