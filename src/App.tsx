@@ -7,6 +7,8 @@ import { CustomerHistoryPage } from './pages/CustomerHistoryPage'
 import { PdvPage } from './pages/PdvPage'
 import { SalesPage } from './pages/SalesPage'
 import { CrediarioPage } from './pages/CrediarioPage'
+import { DashboardPage } from './pages/DashboardPage'
+import { ReportsPage } from './pages/ReportsPage'
 import { Layout } from './components/Layout'
 import { PrivateRoute } from './components/PrivateRoute'
 import { useAuth } from './contexts/AuthContext'
@@ -26,12 +28,7 @@ export function App() {
         element={
           <PrivateRoute>
             <Layout>
-              <div style={{ color: 'var(--white)', fontFamily: 'var(--font-display)', fontSize: '2rem' }}>
-                DASHBOARD
-                <p style={{ fontFamily: 'var(--font-body)', fontSize: '1rem', color: 'var(--gray)', marginTop: '0.5rem' }}>
-                  Fase 5 — em breve
-                </p>
-              </div>
+              <DashboardPage />
             </Layout>
           </PrivateRoute>
         }
@@ -111,6 +108,18 @@ export function App() {
             <AdminRoute>
               <Layout>
                 <CrediarioPage />
+              </Layout>
+            </AdminRoute>
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/relatorios"
+        element={
+          <PrivateRoute>
+            <AdminRoute>
+              <Layout>
+                <ReportsPage />
               </Layout>
             </AdminRoute>
           </PrivateRoute>

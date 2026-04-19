@@ -126,6 +126,25 @@ export function Layout({ children }: LayoutProps) {
                 Crediário
               </NavLink>
               <NavLink
+                to="/relatorios"
+                style={({ isActive }) => ({
+                  display: 'block',
+                  padding: '0.625rem 0.75rem',
+                  borderRadius: 'var(--radius)',
+                  fontFamily: 'var(--font-label)',
+                  fontSize: '0.8rem',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: isActive ? 'var(--white)' : 'var(--gray)',
+                  background: isActive ? 'var(--black3)' : 'transparent',
+                  transition: 'all var(--transition)',
+                  textDecoration: 'none',
+                  marginBottom: '0.25rem',
+                })}
+              >
+                Relatorios
+              </NavLink>
+              <NavLink
                 to="/produtos"
                 style={({ isActive }) => ({
                   display: 'block',
