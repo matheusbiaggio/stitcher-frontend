@@ -1,7 +1,10 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+
+import { type PaymentMethod } from '@bonistore/shared'
+
 import { api } from '../lib/api'
 import { pageTitle, sectionHeader, input } from '../styles/ui'
 
@@ -21,10 +24,13 @@ interface SalesReportData {
   total: number
   quantidade: number
   sales: {
-    id: string; total: number; formaPagamento: string; createdAt: string;
-    customer: { id: string; nome: string } | null;
-    user: { id: string; nome: string };
-    itens: SaleItem[];
+    id: string
+    total: number
+    formaPagamento: string
+    createdAt: string
+    customer: { id: string; nome: string } | null
+    user: { id: string; nome: string }
+    itens: SaleItem[]
   }[]
 }
 
@@ -48,13 +54,19 @@ interface OverviewData {
 }
 
 interface TopProduct {
-  productName: string; sku: string;
-  totalUnidades: number; totalReceita: number;
+  productName: string
+  sku: string
+  totalUnidades: number
+  totalReceita: number
 }
 
 interface LowStockVariant {
-  id: string; productName: string; tamanho: string; cor: string;
-  estoque: number; estoqueMinimo: number;
+  id: string
+  productName: string
+  tamanho: string
+  cor: string
+  estoque: number
+  estoqueMinimo: number
 }
 
 interface CustomerSearchResult {
@@ -69,30 +81,42 @@ function formatMoney(value: number): string {
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString('pt-BR', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   })
 }
 
 function formatShortDate(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+  return new Date(`${iso}T00:00:00`).toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+  })
 }
 
 function formatPercent(value: number, decimals = 1): string {
   return `${value >= 0 ? '+' : ''}${value.toFixed(decimals)}%`
 }
 
+const paymentLabels: Record<PaymentMethod, string> = {
+  PIX: 'PIX',
+  DINHEIRO: 'Dinheiro',
+  CARTAO: 'Cartão',
+  CREDIARIO: 'Crediário',
+}
+
 function paymentLabel(forma: string): string {
-  const map: Record<string, string> = {
-    PIX: 'PIX', DINHEIRO: 'Dinheiro', CARTAO: 'Cartão', CREDIARIO: 'Crediário',
-  }
-  return map[forma] ?? forma
+  return paymentLabels[forma as PaymentMethod] ?? forma
 }
 
 function formatItems(itens: SaleItem[]): string {
   if (!itens || itens.length === 0) return '---'
   return itens
-    .map(i => `${i.variant.product.nome} (${i.variant.tamanho}/${i.variant.cor}) ×${i.quantidade}`)
+    .map(
+      (i) => `${i.variant.product.nome} (${i.variant.tamanho}/${i.variant.cor}) ×${i.quantidade}`,
+    )
     .join(', ')
 }
 
@@ -220,25 +244,30 @@ export function ReportsPage() {
   // Queries — all driven by startDate/endDate
   const overviewQuery = useQuery<OverviewData>({
     queryKey: ['reports-overview', startDate, endDate],
-    queryFn: () => api.get(`/reports/overview?startDate=${startDate}&endDate=${endDate}`).then(r => r.data),
+    queryFn: () =>
+      api.get(`/reports/overview?startDate=${startDate}&endDate=${endDate}`).then((r) => r.data),
     enabled: !!startDate && !!endDate,
   })
 
   const salesQuery = useQuery<SalesReportData>({
     queryKey: ['reports-sales', startDate, endDate],
-    queryFn: () => api.get(`/reports/sales?startDate=${startDate}&endDate=${endDate}`).then(r => r.data),
+    queryFn: () =>
+      api.get(`/reports/sales?startDate=${startDate}&endDate=${endDate}`).then((r) => r.data),
     enabled: !!startDate && !!endDate,
   })
 
   const topProductsQuery = useQuery<{ topProducts: TopProduct[] }>({
     queryKey: ['reports-top-products', startDate, endDate],
-    queryFn: () => api.get(`/reports/top-products?startDate=${startDate}&endDate=${endDate}`).then(r => r.data),
+    queryFn: () =>
+      api
+        .get(`/reports/top-products?startDate=${startDate}&endDate=${endDate}`)
+        .then((r) => r.data),
     enabled: !!startDate && !!endDate,
   })
 
   const lowStockQuery = useQuery<{ lowStock: LowStockVariant[] }>({
     queryKey: ['reports-low-stock'],
-    queryFn: () => api.get('/reports/low-stock').then(r => r.data),
+    queryFn: () => api.get('/reports/low-stock').then((r) => r.data),
   })
 
   // Customer search (unchanged)
@@ -248,18 +277,28 @@ export function ReportsPage() {
 
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => setDebouncedSearch(customerSearch), 300)
-    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
+    timerRef.current = setTimeout(() => {
+      setDebouncedSearch(customerSearch)
+    }, 300)
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+    }
   }, [customerSearch])
 
   const customersQuery = useQuery<{ customers: CustomerSearchResult[] }>({
     queryKey: ['customers-search', debouncedSearch],
-    queryFn: () => api.get(`/customers/search?q=${encodeURIComponent(debouncedSearch)}`).then(r => r.data),
+    queryFn: () =>
+      api.get(`/customers/search?q=${encodeURIComponent(debouncedSearch)}`).then((r) => r.data),
     enabled: debouncedSearch.length >= 1,
   })
 
   const periodLabel = useMemo(() => {
-    const fmt = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
+    const fmt = (d: string) =>
+      new Date(`${d}T00:00:00`).toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      })
     return `${fmt(startDate)} → ${fmt(endDate)}`
   }, [startDate, endDate])
 
@@ -270,36 +309,94 @@ export function ReportsPage() {
       <h1 style={pageTitle}>RELATÓRIOS</h1>
 
       {/* Period selector */}
-      <div style={{
-        background: 'var(--black2)',
-        border: '1px solid var(--black4)',
-        borderRadius: 'var(--radius-lg)',
-        padding: '1rem 1.25rem',
-        marginBottom: '1.5rem',
-      }}>
+      <div
+        style={{
+          background: 'var(--black2)',
+          border: '1px solid var(--black4)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '1rem 1.25rem',
+          marginBottom: '1.5rem',
+        }}
+      >
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.7rem', letterSpacing: '0.1em', color: 'var(--gray)', textTransform: 'uppercase', marginRight: '0.5rem' }}>
+          <span
+            style={{
+              fontFamily: 'var(--font-label)',
+              fontSize: '0.7rem',
+              letterSpacing: '0.1em',
+              color: 'var(--gray)',
+              textTransform: 'uppercase',
+              marginRight: '0.5rem',
+            }}
+          >
             Período
           </span>
-          <button onClick={() => applyPreset('7d')} style={presetButton(preset === '7d')}>7 dias</button>
-          <button onClick={() => applyPreset('30d')} style={presetButton(preset === '30d')}>30 dias</button>
-          <button onClick={() => applyPreset('90d')} style={presetButton(preset === '90d')}>90 dias</button>
-          <button onClick={() => applyPreset('month')} style={presetButton(preset === 'month')}>Mês atual</button>
-          <div style={{ width: '1px', height: '24px', background: 'var(--black4)', margin: '0 0.5rem' }} />
+          <button
+            onClick={() => {
+              applyPreset('7d')
+            }}
+            style={presetButton(preset === '7d')}
+          >
+            7 dias
+          </button>
+          <button
+            onClick={() => {
+              applyPreset('30d')
+            }}
+            style={presetButton(preset === '30d')}
+          >
+            30 dias
+          </button>
+          <button
+            onClick={() => {
+              applyPreset('90d')
+            }}
+            style={presetButton(preset === '90d')}
+          >
+            90 dias
+          </button>
+          <button
+            onClick={() => {
+              applyPreset('month')
+            }}
+            style={presetButton(preset === 'month')}
+          >
+            Mês atual
+          </button>
+          <div
+            style={{
+              width: '1px',
+              height: '24px',
+              background: 'var(--black4)',
+              margin: '0 0.5rem',
+            }}
+          />
           <input
             type="date"
             value={startDate}
-            onChange={e => onCustomDate('start', e.target.value)}
+            onChange={(e) => {
+              onCustomDate('start', e.target.value)
+            }}
             style={{ ...input, width: '150px' }}
           />
           <span style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>→</span>
           <input
             type="date"
             value={endDate}
-            onChange={e => onCustomDate('end', e.target.value)}
+            onChange={(e) => {
+              onCustomDate('end', e.target.value)
+            }}
             style={{ ...input, width: '150px' }}
           />
-          <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-label)', fontSize: '0.7rem', color: 'var(--gray)', letterSpacing: '0.05em' }}>
+          <span
+            style={{
+              marginLeft: 'auto',
+              fontFamily: 'var(--font-label)',
+              fontSize: '0.7rem',
+              color: 'var(--gray)',
+              letterSpacing: '0.05em',
+            }}
+          >
             {periodLabel}
           </span>
         </div>
@@ -311,12 +408,14 @@ export function ReportsPage() {
           <p style={kpiLabel}>Receita</p>
           <p style={kpiValue}>{overview ? formatMoney(overview.kpis.totalReceita) : '—'}</p>
           {overview?.comparison.growthPercent != null && (
-            <p style={{
-              fontFamily: 'var(--font-label)',
-              fontSize: '0.7rem',
-              marginTop: '0.25rem',
-              color: overview.comparison.growthPercent >= 0 ? 'var(--success)' : 'var(--danger)',
-            }}>
+            <p
+              style={{
+                fontFamily: 'var(--font-label)',
+                fontSize: '0.7rem',
+                marginTop: '0.25rem',
+                color: overview.comparison.growthPercent >= 0 ? 'var(--success)' : 'var(--danger)',
+              }}
+            >
               {formatPercent(overview.comparison.growthPercent)} vs período anterior
             </p>
           )}
@@ -325,7 +424,14 @@ export function ReportsPage() {
           <p style={kpiLabel}>Vendas</p>
           <p style={kpiValue}>{overview?.kpis.totalVendas ?? '—'}</p>
           {overview && (
-            <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.7rem', color: 'var(--gray)', marginTop: '0.25rem' }}>
+            <p
+              style={{
+                fontFamily: 'var(--font-label)',
+                fontSize: '0.7rem',
+                color: 'var(--gray)',
+                marginTop: '0.25rem',
+              }}
+            >
               Anterior: {overview.comparison.previousVendas}
             </p>
           )}
@@ -338,7 +444,14 @@ export function ReportsPage() {
           <p style={kpiLabel}>Cancelamentos</p>
           <p style={kpiValue}>{overview?.kpis.cancelamentos ?? '—'}</p>
           {overview && overview.kpis.receitaCancelada > 0 && (
-            <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.7rem', color: 'var(--danger)', marginTop: '0.25rem' }}>
+            <p
+              style={{
+                fontFamily: 'var(--font-label)',
+                fontSize: '0.7rem',
+                color: 'var(--danger)',
+                marginTop: '0.25rem',
+              }}
+            >
               {formatMoney(overview.kpis.receitaCancelada)} perdidos
             </p>
           )}
@@ -347,14 +460,16 @@ export function ReportsPage() {
 
       {/* Revenue chart */}
       <h2 style={sectionTitle}>Receita por Dia</h2>
-      <div style={{
-        height: 280,
-        background: 'var(--black2)',
-        border: '1px solid var(--black4)',
-        borderRadius: 'var(--radius-lg)',
-        padding: '1rem',
-        marginTop: '1rem',
-      }}>
+      <div
+        style={{
+          height: 280,
+          background: 'var(--black2)',
+          border: '1px solid var(--black4)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '1rem',
+          marginTop: '1rem',
+        }}
+      >
         {overviewQuery.isPending ? (
           <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>Carregando...</p>
         ) : overview && overview.dailyRevenue.length > 0 ? (
@@ -373,7 +488,12 @@ export function ReportsPage() {
                 tick={{ fontSize: 11, fontFamily: 'var(--font-body)' }}
               />
               <Tooltip
-                contentStyle={{ background: '#111111', border: '1px solid #2a2a2a', borderRadius: 4, color: '#f5f5f5' }}
+                contentStyle={{
+                  background: '#111111',
+                  border: '1px solid #2a2a2a',
+                  borderRadius: 4,
+                  color: '#f5f5f5',
+                }}
                 formatter={(value: unknown, name: unknown) => {
                   if (name === 'receita') return [formatMoney(Number(value)), 'Receita']
                   return [String(value), 'Vendas']
@@ -384,12 +504,21 @@ export function ReportsPage() {
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>Sem dados no período.</p>
+          <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>
+            Sem dados no período.
+          </p>
         )}
       </div>
 
       {/* Two-column: payment breakdown + top customers */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginTop: '1.5rem' }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '1.5rem',
+          marginTop: '1.5rem',
+        }}
+      >
         {/* Payment breakdown */}
         <div>
           <h2 style={sectionTitle}>Formas de Pagamento</h2>
@@ -405,19 +534,25 @@ export function ReportsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {overview.paymentBreakdown.map(p => (
+                  {overview.paymentBreakdown.map((p) => (
                     <tr key={p.formaPagamento}>
                       <td style={tableCell}>{paymentLabel(p.formaPagamento)}</td>
-                      <td style={{ ...tableCell, textAlign: 'right', color: 'var(--gray)' }}>{p.quantidade}</td>
+                      <td style={{ ...tableCell, textAlign: 'right', color: 'var(--gray)' }}>
+                        {p.quantidade}
+                      </td>
                       <td style={{ ...tableCell, textAlign: 'right' }}>{formatMoney(p.total)}</td>
-                      <td style={{ ...tableCell, textAlign: 'right', color: 'var(--gray)' }}>{p.percent.toFixed(1)}%</td>
+                      <td style={{ ...tableCell, textAlign: 'right', color: 'var(--gray)' }}>
+                        {p.percent.toFixed(1)}%
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ) : (
-            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', marginTop: '1rem' }}>Sem vendas no período.</p>
+            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', marginTop: '1rem' }}>
+              Sem vendas no período.
+            </p>
           )}
         </div>
 
@@ -441,20 +576,26 @@ export function ReportsPage() {
                       key={c.id}
                       onClick={() => navigate(`/clientes/${c.id}/historico`)}
                       style={{ cursor: 'pointer' }}
-                      onMouseEnter={e => (e.currentTarget.style.background = 'var(--black3)')}
-                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--black3)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                     >
                       <td style={{ ...tableCell, color: 'var(--gray)' }}>{i + 1}</td>
                       <td style={tableCell}>{c.nome}</td>
-                      <td style={{ ...tableCell, textAlign: 'right', color: 'var(--gray)' }}>{c.quantidadeCompras}</td>
-                      <td style={{ ...tableCell, textAlign: 'right', fontWeight: 500 }}>{formatMoney(c.totalGasto)}</td>
+                      <td style={{ ...tableCell, textAlign: 'right', color: 'var(--gray)' }}>
+                        {c.quantidadeCompras}
+                      </td>
+                      <td style={{ ...tableCell, textAlign: 'right', fontWeight: 500 }}>
+                        {formatMoney(c.totalGasto)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ) : (
-            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', marginTop: '1rem' }}>Sem clientes no período.</p>
+            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', marginTop: '1rem' }}>
+              Sem clientes no período.
+            </p>
           )}
         </div>
       </div>
@@ -462,7 +603,9 @@ export function ReportsPage() {
       {/* Top products */}
       <h2 style={sectionTitle}>Top 10 Produtos</h2>
       {topProductsQuery.isPending ? (
-        <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', marginTop: '1rem' }}>Carregando...</p>
+        <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', marginTop: '1rem' }}>
+          Carregando...
+        </p>
       ) : topProductsQuery.data?.topProducts && topProductsQuery.data.topProducts.length > 0 ? (
         <div style={tableContainer}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -489,13 +632,17 @@ export function ReportsPage() {
           </table>
         </div>
       ) : (
-        <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', marginTop: '1rem' }}>Nenhum produto vendido no período.</p>
+        <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', marginTop: '1rem' }}>
+          Nenhum produto vendido no período.
+        </p>
       )}
 
       {/* Detailed sales list */}
       <h2 style={sectionTitle}>Vendas Detalhadas</h2>
       {salesQuery.isPending ? (
-        <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', marginTop: '1rem' }}>Carregando...</p>
+        <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', marginTop: '1rem' }}>
+          Carregando...
+        </p>
       ) : salesQuery.data && salesQuery.data.sales.length > 0 ? (
         <div style={tableContainer}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -510,10 +657,12 @@ export function ReportsPage() {
               </tr>
             </thead>
             <tbody>
-              {salesQuery.data.sales.map(sale => (
+              {salesQuery.data.sales.map((sale) => (
                 <tr key={sale.id}>
                   <td style={tableCell}>{formatDate(sale.createdAt)}</td>
-                  <td style={{ ...tableCell, color: sale.customer ? 'var(--white)' : 'var(--gray)' }}>
+                  <td
+                    style={{ ...tableCell, color: sale.customer ? 'var(--white)' : 'var(--gray)' }}
+                  >
                     {sale.customer?.nome ?? '---'}
                   </td>
                   <td style={{ ...tableCell, color: 'var(--gray)', fontSize: '0.75rem' }}>
@@ -530,13 +679,17 @@ export function ReportsPage() {
           </table>
         </div>
       ) : (
-        <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', marginTop: '1rem' }}>Nenhuma venda no período.</p>
+        <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', marginTop: '1rem' }}>
+          Nenhuma venda no período.
+        </p>
       )}
 
       {/* Low stock */}
       <h2 style={sectionTitle}>Estoque Crítico</h2>
       {lowStockQuery.isPending ? (
-        <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', marginTop: '1rem' }}>Carregando...</p>
+        <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', marginTop: '1rem' }}>
+          Carregando...
+        </p>
       ) : lowStockQuery.data?.lowStock && lowStockQuery.data.lowStock.length > 0 ? (
         <div style={tableContainer}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -550,19 +703,23 @@ export function ReportsPage() {
               </tr>
             </thead>
             <tbody>
-              {lowStockQuery.data.lowStock.map(variant => (
+              {lowStockQuery.data.lowStock.map((variant) => (
                 <tr key={variant.id}>
                   <td style={tableCell}>{variant.productName}</td>
                   <td style={{ ...tableCell, color: 'var(--gray)' }}>
                     {variant.tamanho} / {variant.cor}
                   </td>
-                  <td style={{ ...tableCell, textAlign: 'right', color: '#ff6b6b', fontWeight: 500 }}>
+                  <td
+                    style={{ ...tableCell, textAlign: 'right', color: '#ff6b6b', fontWeight: 500 }}
+                  >
                     {variant.estoque}
                   </td>
                   <td style={{ ...tableCell, textAlign: 'right', color: 'var(--gray)' }}>
                     {variant.estoqueMinimo}
                   </td>
-                  <td style={{ ...tableCell, textAlign: 'right', color: '#ff6b6b', fontWeight: 500 }}>
+                  <td
+                    style={{ ...tableCell, textAlign: 'right', color: '#ff6b6b', fontWeight: 500 }}
+                  >
                     {variant.estoqueMinimo - variant.estoque}
                   </td>
                 </tr>
@@ -571,7 +728,9 @@ export function ReportsPage() {
           </table>
         </div>
       ) : (
-        <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', marginTop: '1rem' }}>Nenhum alerta de estoque.</p>
+        <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', marginTop: '1rem' }}>
+          Nenhum alerta de estoque.
+        </p>
       )}
 
       {/* Customer history link */}
@@ -581,22 +740,33 @@ export function ReportsPage() {
           type="text"
           placeholder="Buscar cliente por nome ou CPF..."
           value={customerSearch}
-          onChange={e => setCustomerSearch(e.target.value)}
+          onChange={(e) => {
+            setCustomerSearch(e.target.value)
+          }}
           style={input}
         />
         {debouncedSearch.length >= 1 && customersQuery.data && (
-          <div style={{
-            background: 'var(--black2)',
-            border: '1px solid var(--black4)',
-            borderRadius: 'var(--radius)',
-            marginTop: '0.5rem',
-          }}>
+          <div
+            style={{
+              background: 'var(--black2)',
+              border: '1px solid var(--black4)',
+              borderRadius: 'var(--radius)',
+              marginTop: '0.5rem',
+            }}
+          >
             {customersQuery.data.customers.length === 0 ? (
-              <p style={{ padding: '0.75rem', color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.85rem' }}>
+              <p
+                style={{
+                  padding: '0.75rem',
+                  color: 'var(--gray)',
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '0.85rem',
+                }}
+              >
                 Nenhum cliente encontrado.
               </p>
             ) : (
-              customersQuery.data.customers.map(customer => (
+              customersQuery.data.customers.map((customer) => (
                 <div
                   key={customer.id}
                   onClick={() => navigate(`/clientes/${customer.id}/historico`)}
@@ -606,14 +776,27 @@ export function ReportsPage() {
                     borderBottom: '1px solid var(--black3)',
                     transition: 'background var(--transition)',
                   }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--black3)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--black3)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                 >
-                  <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.85rem', color: 'var(--white)' }}>
+                  <p
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      fontSize: '0.85rem',
+                      color: 'var(--white)',
+                    }}
+                  >
                     {customer.nome}
                   </p>
                   {customer.cpf && (
-                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.75rem', color: 'var(--gray)', marginTop: '0.125rem' }}>
+                    <p
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        fontSize: '0.75rem',
+                        color: 'var(--gray)',
+                        marginTop: '0.125rem',
+                      }}
+                    >
                       CPF: {customer.cpf}
                     </p>
                   )}

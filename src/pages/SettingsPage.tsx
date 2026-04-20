@@ -1,11 +1,19 @@
 import { useState, useEffect, FormEvent } from 'react'
+
+import { ROLES, type Role } from '@bonistore/shared'
+
 import { api } from '../lib/api'
+
+const roleLabels: Record<Role, string> = {
+  admin: 'Admin',
+  caixa: 'Caixa (operador)',
+}
 
 interface User {
   id: string
   nome: string
   email: string
-  role: 'admin' | 'caixa'
+  role: Role
   telefone: string
   ativo: boolean
   createdAt: string
@@ -15,7 +23,7 @@ interface NewUserForm {
   nome: string
   email: string
   senha: string
-  role: 'admin' | 'caixa'
+  role: Role
   telefone: string
 }
 
@@ -23,7 +31,7 @@ const FORM_EMPTY: NewUserForm = {
   nome: '',
   email: '',
   senha: '',
-  role: 'caixa',
+  role: ROLES[1],
   telefone: '',
 }
 
@@ -74,9 +82,7 @@ export function SettingsPage() {
     setDeactivatingId(userId)
     try {
       await api.patch(`/users/${userId}/deactivate`)
-      setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, ativo: false } : u))
-      )
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, ativo: false } : u)))
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
       alert(msg ?? 'Erro ao desativar usuário')
@@ -110,26 +116,37 @@ export function SettingsPage() {
   return (
     <div>
       {/* Header */}
-      <h1 style={{
-        fontFamily: 'var(--font-display)',
-        fontSize: '2rem',
-        letterSpacing: '0.05em',
-        marginBottom: '2rem',
-      }}>
+      <h1
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: '2rem',
+          letterSpacing: '0.05em',
+          marginBottom: '2rem',
+        }}
+      >
         CONFIGURAÇÕES
       </h1>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '2rem', alignItems: 'start' }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 380px',
+          gap: '2rem',
+          alignItems: 'start',
+        }}
+      >
         {/* Lista de usuários */}
         <section>
-          <h2 style={{
-            fontFamily: 'var(--font-label)',
-            fontSize: '0.8rem',
-            letterSpacing: '0.15em',
-            textTransform: 'uppercase',
-            color: 'var(--gray)',
-            marginBottom: '1rem',
-          }}>
+          <h2
+            style={{
+              fontFamily: 'var(--font-label)',
+              fontSize: '0.8rem',
+              letterSpacing: '0.15em',
+              textTransform: 'uppercase',
+              color: 'var(--gray)',
+              marginBottom: '1rem',
+            }}
+          >
             Usuários do sistema
           </h2>
 
@@ -152,24 +169,39 @@ export function SettingsPage() {
                   }}
                 >
                   <div>
-                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.9rem', color: 'var(--white)' }}>
+                    <p
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        fontSize: '0.9rem',
+                        color: 'var(--white)',
+                      }}
+                    >
                       {user.nome}
                     </p>
-                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.8rem', color: 'var(--gray)', marginTop: '0.2rem' }}>
+                    <p
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        fontSize: '0.8rem',
+                        color: 'var(--gray)',
+                        marginTop: '0.2rem',
+                      }}
+                    >
                       {user.email}
                     </p>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <span style={{
-                      fontFamily: 'var(--font-label)',
-                      fontSize: '0.7rem',
-                      letterSpacing: '0.1em',
-                      textTransform: 'uppercase',
-                      color: user.role === 'admin' ? 'var(--info)' : 'var(--gray)',
-                      padding: '0.25rem 0.5rem',
-                      background: 'var(--black3)',
-                      borderRadius: '4px',
-                    }}>
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-label)',
+                        fontSize: '0.7rem',
+                        letterSpacing: '0.1em',
+                        textTransform: 'uppercase',
+                        color: user.role === 'admin' ? 'var(--info)' : 'var(--gray)',
+                        padding: '0.25rem 0.5rem',
+                        background: 'var(--black3)',
+                        borderRadius: '4px',
+                      }}
+                    >
                       {user.role}
                     </span>
                     {user.ativo ? (
@@ -193,12 +225,14 @@ export function SettingsPage() {
                         {deactivatingId === user.id ? '...' : 'Desativar'}
                       </button>
                     ) : (
-                      <span style={{
-                        fontFamily: 'var(--font-label)',
-                        fontSize: '0.7rem',
-                        color: 'var(--gray2)',
-                        letterSpacing: '0.05em',
-                      }}>
+                      <span
+                        style={{
+                          fontFamily: 'var(--font-label)',
+                          fontSize: '0.7rem',
+                          color: 'var(--gray2)',
+                          letterSpacing: '0.05em',
+                        }}
+                      >
                         Inativo
                       </span>
                     )}
@@ -210,30 +244,39 @@ export function SettingsPage() {
         </section>
 
         {/* Formulário de criação */}
-        <section style={{
-          background: 'var(--black2)',
-          border: '1px solid var(--black4)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '1.5rem',
-        }}>
-          <h2 style={{
-            fontFamily: 'var(--font-label)',
-            fontSize: '0.8rem',
-            letterSpacing: '0.15em',
-            textTransform: 'uppercase',
-            color: 'var(--gray)',
-            marginBottom: '1.25rem',
-          }}>
+        <section
+          style={{
+            background: 'var(--black2)',
+            border: '1px solid var(--black4)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '1.5rem',
+          }}
+        >
+          <h2
+            style={{
+              fontFamily: 'var(--font-label)',
+              fontSize: '0.8rem',
+              letterSpacing: '0.15em',
+              textTransform: 'uppercase',
+              color: 'var(--gray)',
+              marginBottom: '1.25rem',
+            }}
+          >
             Novo usuário
           </h2>
 
-          <form onSubmit={handleCreateUser} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <form
+            onSubmit={handleCreateUser}
+            style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+          >
             <div>
               <label style={labelStyle}>Nome</label>
               <input
                 type="text"
                 value={form.nome}
-                onChange={(e) => setForm({ ...form, nome: e.target.value })}
+                onChange={(e) => {
+                  setForm({ ...form, nome: e.target.value })
+                }}
                 required
                 style={inputStyle}
                 placeholder="Nome completo"
@@ -244,7 +287,9 @@ export function SettingsPage() {
               <input
                 type="email"
                 value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                onChange={(e) => {
+                  setForm({ ...form, email: e.target.value })
+                }}
                 required
                 style={inputStyle}
                 placeholder="email@exemplo.com"
@@ -255,7 +300,9 @@ export function SettingsPage() {
               <input
                 type="password"
                 value={form.senha}
-                onChange={(e) => setForm({ ...form, senha: e.target.value })}
+                onChange={(e) => {
+                  setForm({ ...form, senha: e.target.value })
+                }}
                 required
                 minLength={6}
                 style={inputStyle}
@@ -267,7 +314,9 @@ export function SettingsPage() {
               <input
                 type="tel"
                 value={form.telefone}
-                onChange={(e) => setForm({ ...form, telefone: e.target.value })}
+                onChange={(e) => {
+                  setForm({ ...form, telefone: e.target.value })
+                }}
                 required
                 style={inputStyle}
                 placeholder="11999999999"
@@ -277,16 +326,27 @@ export function SettingsPage() {
               <label style={labelStyle}>Role</label>
               <select
                 value={form.role}
-                onChange={(e) => setForm({ ...form, role: e.target.value as 'admin' | 'caixa' })}
+                onChange={(e) => {
+                  setForm({ ...form, role: e.target.value as Role })
+                }}
                 style={{ ...inputStyle, cursor: 'pointer' }}
               >
-                <option value="caixa">Caixa (operador)</option>
-                <option value="admin">Admin</option>
+                {ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {roleLabels[r]}
+                  </option>
+                ))}
               </select>
             </div>
 
             {formError && (
-              <p style={{ color: 'var(--danger)', fontSize: '0.8rem', fontFamily: 'var(--font-body)' }}>
+              <p
+                style={{
+                  color: 'var(--danger)',
+                  fontSize: '0.8rem',
+                  fontFamily: 'var(--font-body)',
+                }}
+              >
                 {formError}
               </p>
             )}

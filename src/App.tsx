@@ -1,21 +1,24 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { LoginPage } from './pages/LoginPage'
-import { SettingsPage } from './pages/SettingsPage'
-import { ProductsPage } from './pages/ProductsPage'
-import { CustomersPage } from './pages/CustomersPage'
-import { CustomerHistoryPage } from './pages/CustomerHistoryPage'
-import { PdvPage } from './pages/PdvPage'
-import { SalesPage } from './pages/SalesPage'
-import { CrediarioPage } from './pages/CrediarioPage'
-import { DashboardPage } from './pages/DashboardPage'
-import { ReportsPage } from './pages/ReportsPage'
+
+import { ROLES } from '@bonistore/shared'
+
 import { Layout } from './components/Layout'
 import { PrivateRoute } from './components/PrivateRoute'
 import { useAuth } from './contexts/AuthContext'
+import { CrediarioPage } from './pages/CrediarioPage'
+import { CustomerHistoryPage } from './pages/CustomerHistoryPage'
+import { CustomersPage } from './pages/CustomersPage'
+import { DashboardPage } from './pages/DashboardPage'
+import { LoginPage } from './pages/LoginPage'
+import { PdvPage } from './pages/PdvPage'
+import { ProductsPage } from './pages/ProductsPage'
+import { ReportsPage } from './pages/ReportsPage'
+import { SalesPage } from './pages/SalesPage'
+import { SettingsPage } from './pages/SettingsPage'
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
-  if (user?.role !== 'admin') return <Navigate to="/" replace />
+  if (user?.role !== ROLES[0]) return <Navigate to="/" replace />
   return <>{children}</>
 }
 

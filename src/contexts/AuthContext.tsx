@@ -1,11 +1,12 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { type Role } from '@bonistore/shared'
 import { api } from '../lib/api'
 
 interface User {
   id: string
   email: string
   nome: string
-  role: 'admin' | 'caixa'
+  role: Role
 }
 
 interface AuthContextValue {
@@ -23,7 +24,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Verifica sessão existente ao carregar
   useEffect(() => {
-    api.get('/auth/me')
+    api
+      .get('/auth/me')
       .then((res) => setUser(res.data.user))
       .catch(() => setUser(null))
       .finally(() => setLoading(false))
@@ -40,9 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>
   )
 }
 

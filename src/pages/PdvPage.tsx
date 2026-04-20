@@ -1,13 +1,30 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { PAYMENT_METHODS, type PaymentMethod } from '@bonistore/shared'
 import { api } from '../lib/api'
 import {
-  type CartItem, type Product, type ProductVariant, type FormaPagamento,
-  addItemToCart, removeItemFromCart, updateItemQty, cartTotal, formatMoney, validateCheckout,
+  type CartItem,
+  type Product,
+  type ProductVariant,
+  type FormaPagamento,
+  addItemToCart,
+  removeItemFromCart,
+  updateItemQty,
+  cartTotal,
+  formatMoney,
+  validateCheckout,
 } from '../utils/cart'
 import {
-  pageTitle, sectionHeader, card, input, label,
-  primaryButton, rowActionButton, rowDangerButton, badge, fieldError,
+  pageTitle,
+  sectionHeader,
+  card,
+  input,
+  label,
+  primaryButton,
+  rowActionButton,
+  rowDangerButton,
+  badge,
+  fieldError,
 } from '../styles/ui'
 
 interface CustomerResult {
@@ -17,62 +34,81 @@ interface CustomerResult {
   saldoDevedor: number
 }
 
+const paymentLabels: Record<PaymentMethod, string> = {
+  PIX: 'PIX',
+  DINHEIRO: 'Dinheiro',
+  CARTAO: 'Cartão',
+  CREDIARIO: 'Crediário',
+}
+
+const CREDIARIO = PAYMENT_METHODS[3]
+
 export function PdvPage() {
   const queryClient = useQueryClient()
   const [searchInput, setSearchInput] = useState('')
   const [cart, setCart] = useState<CartItem[]>([])
   const [formaPagamento, setFormaPagamento] = useState<FormaPagamento | null>(null)
   const [customerSearch, setCustomerSearch] = useState('')
-  const [selectedCustomer, setSelectedCustomer] = useState<{ id: string; nome: string } | null>(null)
+  const [selectedCustomer, setSelectedCustomer] = useState<{ id: string; nome: string } | null>(
+    null,
+  )
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
   // Load full catalog — always refetch on mount so newly added products appear immediately
   const { data: allProductsData, isPending: catalogLoading } = useQuery({
     queryKey: ['pdv-catalog'],
-    queryFn: () => api.get<{ products: Product[] }>('/products').then(r => r.data.products),
+    queryFn: () => api.get<{ products: Product[] }>('/products').then((r) => r.data.products),
     staleTime: 0,
     refetchOnMount: 'always',
   })
-  const allProducts = (allProductsData ?? []).filter(p => (p as Product & { ativo?: boolean }).ativo !== false)
+  const allProducts = (allProductsData ?? []).filter(
+    (p) => (p as Product & { ativo?: boolean }).ativo !== false,
+  )
 
   // Client-side filter: match nome, SKU, tamanho, cor
   const q = searchInput.trim().toLowerCase()
-  const products = q.length === 0
-    ? allProducts
-    : allProducts.filter(p =>
-        p.nome.toLowerCase().includes(q) ||
-        p.sku.toLowerCase().includes(q) ||
-        p.variants.some(v =>
-          v.tamanho.toLowerCase().includes(q) ||
-          v.cor.toLowerCase().includes(q)
+  const products =
+    q.length === 0
+      ? allProducts
+      : allProducts.filter(
+          (p) =>
+            p.nome.toLowerCase().includes(q) ||
+            p.sku.toLowerCase().includes(q) ||
+            p.variants.some(
+              (v) => v.tamanho.toLowerCase().includes(q) || v.cor.toLowerCase().includes(q),
+            ),
         )
-      )
 
   const { data: customersData } = useQuery({
     queryKey: ['customers-search', customerSearch],
-    queryFn: () => api.get<{ customers: CustomerResult[] }>('/customers/search?q=' + encodeURIComponent(customerSearch)).then(r => r.data.customers),
+    queryFn: () =>
+      api
+        .get<{
+          customers: CustomerResult[]
+        }>('/customers/search?q=' + encodeURIComponent(customerSearch))
+        .then((r) => r.data.customers),
     enabled: customerSearch.length >= 1,
     staleTime: 10_000,
   })
   const customerResults = customersData ?? []
 
   const checkoutMutation = useMutation({
-    mutationFn: (body: object) => api.post('/sales', body).then(r => r.data),
+    mutationFn: (body: object) => api.post('/sales', body).then((r) => r.data),
   })
 
   function addToCart(variant: ProductVariant, product: Product) {
-    setCart(prev => addItemToCart(prev, variant, product))
+    setCart((prev) => addItemToCart(prev, variant, product))
     setErrorMsg(null)
     setSuccessMsg(null)
   }
 
   function removeFromCart(variantId: string) {
-    setCart(prev => removeItemFromCart(prev, variantId))
+    setCart((prev) => removeItemFromCart(prev, variantId))
   }
 
   function updateQty(variantId: string, quantidade: number) {
-    setCart(prev => updateItemQty(prev, variantId, quantidade))
+    setCart((prev) => updateItemQty(prev, variantId, quantidade))
   }
 
   const total = cartTotal(cart)
@@ -90,7 +126,7 @@ export function PdvPage() {
     const body = {
       customerId: selectedCustomer?.id,
       formaPagamento,
-      itens: cart.map(i => ({
+      itens: cart.map((i) => ({
         variantId: i.variantId,
         quantidade: i.quantidade,
         precoUnitario: i.precoUnitario,
@@ -114,18 +150,23 @@ export function PdvPage() {
     })
   }
 
-  const paymentOptions: { value: FormaPagamento; label: string }[] = [
-    { value: 'PIX', label: 'PIX' },
-    { value: 'DINHEIRO', label: 'Dinheiro' },
-    { value: 'CARTAO', label: 'Cartão' },
-    { value: 'CREDIARIO', label: 'Crediário' },
-  ]
+  const paymentOptions: { value: FormaPagamento; label: string }[] = PAYMENT_METHODS.map((v) => ({
+    value: v,
+    label: paymentLabels[v],
+  }))
 
   return (
     <div>
       <h1 style={pageTitle}>PDV — CAIXA</h1>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 420px', gap: '1.5rem', alignItems: 'start' }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 420px',
+          gap: '1.5rem',
+          alignItems: 'start',
+        }}
+      >
         {/* Left column — catalog + filter */}
         <section>
           <h2 style={sectionHeader}>Catálogo</h2>
@@ -133,51 +174,105 @@ export function PdvPage() {
             type="text"
             placeholder="Filtrar por nome, SKU, tamanho ou cor..."
             value={searchInput}
-            onChange={e => setSearchInput(e.target.value)}
+            onChange={(e) => setSearchInput(e.target.value)}
             style={{ ...input, marginBottom: '1rem' }}
             autoFocus
           />
 
           {catalogLoading ? (
-            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.875rem' }}>Carregando catálogo...</p>
+            <p
+              style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.875rem' }}
+            >
+              Carregando catálogo...
+            </p>
           ) : products.length === 0 ? (
-            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.875rem' }}>
-              {q.length > 0 ? `Nenhum produto encontrado para "${searchInput}"` : 'Nenhum produto cadastrado.'}
+            <p
+              style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.875rem' }}
+            >
+              {q.length > 0
+                ? `Nenhum produto encontrado para "${searchInput}"`
+                : 'Nenhum produto cadastrado.'}
             </p>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.625rem' }}>
-              {products.map(product => {
-                const availableVariants = product.variants.filter(v => v.estoque > 0)
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                gap: '0.625rem',
+              }}
+            >
+              {products.map((product) => {
+                const availableVariants = product.variants.filter((v) => v.estoque > 0)
                 const outOfStock = availableVariants.length === 0
                 return (
-                  <div key={product.id} style={{
-                    ...card,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '0.625rem',
-                    opacity: outOfStock ? 0.4 : 1,
-                  }}>
+                  <div
+                    key={product.id}
+                    style={{
+                      ...card,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.625rem',
+                      opacity: outOfStock ? 0.4 : 1,
+                    }}
+                  >
                     {/* Header: name + price */}
                     <div>
-                      <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--white)', fontWeight: 500, marginBottom: '0.3rem', lineHeight: 1.3 }}>
+                      <p
+                        style={{
+                          fontFamily: 'var(--font-body)',
+                          fontSize: '0.875rem',
+                          color: 'var(--white)',
+                          fontWeight: 500,
+                          marginBottom: '0.3rem',
+                          lineHeight: 1.3,
+                        }}
+                      >
                         {product.nome}
                       </p>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                          flexWrap: 'wrap',
+                        }}
+                      >
                         <span style={badge('info')}>{product.sku}</span>
-                        <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.7rem', color: 'var(--success)', letterSpacing: '0.05em' }}>
+                        <span
+                          style={{
+                            fontFamily: 'var(--font-label)',
+                            fontSize: '0.7rem',
+                            color: 'var(--success)',
+                            letterSpacing: '0.05em',
+                          }}
+                        >
                           {formatMoney(product.preco)}
                         </span>
                       </div>
                     </div>
 
                     {/* Variant buttons */}
-                    <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginTop: 'auto' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: '0.3rem',
+                        flexWrap: 'wrap',
+                        marginTop: 'auto',
+                      }}
+                    >
                       {outOfStock ? (
-                        <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.6rem', color: 'var(--gray)', letterSpacing: '0.08em' }}>
+                        <span
+                          style={{
+                            fontFamily: 'var(--font-label)',
+                            fontSize: '0.6rem',
+                            color: 'var(--gray)',
+                            letterSpacing: '0.08em',
+                          }}
+                        >
                           SEM ESTOQUE
                         </span>
                       ) : (
-                        availableVariants.map(variant => (
+                        availableVariants.map((variant) => (
                           <button
                             key={variant.id}
                             onClick={() => addToCart(variant, product)}
@@ -194,11 +289,18 @@ export function PdvPage() {
                               textTransform: 'uppercase',
                               transition: 'border-color 0.1s',
                             }}
-                            onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--white)')}
-                            onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--black4)')}
+                            onMouseEnter={(e) =>
+                              (e.currentTarget.style.borderColor = 'var(--white)')
+                            }
+                            onMouseLeave={(e) =>
+                              (e.currentTarget.style.borderColor = 'var(--black4)')
+                            }
                           >
-                            {variant.tamanho && `${variant.tamanho} `}{variant.cor}
-                            <span style={{ color: 'var(--gray)', marginLeft: '0.25rem' }}>({variant.estoque})</span>
+                            {variant.tamanho && `${variant.tamanho} `}
+                            {variant.cor}
+                            <span style={{ color: 'var(--gray)', marginLeft: '0.25rem' }}>
+                              ({variant.estoque})
+                            </span>
                           </button>
                         ))
                       )}
@@ -212,11 +314,25 @@ export function PdvPage() {
 
         {/* Right column — cart + payment + checkout */}
         <section>
-          <div style={{ background: 'var(--black2)', border: '1px solid var(--black4)', borderRadius: 'var(--radius-lg)', padding: '1.5rem' }}>
+          <div
+            style={{
+              background: 'var(--black2)',
+              border: '1px solid var(--black4)',
+              borderRadius: 'var(--radius-lg)',
+              padding: '1.5rem',
+            }}
+          >
             <h2 style={sectionHeader}>Sacola</h2>
 
             {cart.length === 0 ? (
-              <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+              <p
+                style={{
+                  color: 'var(--gray)',
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '0.875rem',
+                  marginBottom: '1.5rem',
+                }}
+              >
                 Nenhum item adicionado.
               </p>
             ) : (
@@ -224,39 +340,114 @@ export function PdvPage() {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr>
-                      {['Produto', 'Qtd', 'Unit', 'Total', ''].map(col => (
-                        <th key={col} style={{ fontFamily: 'var(--font-label)', fontSize: '0.65rem', letterSpacing: '0.1em', color: 'var(--gray)', textAlign: 'left', paddingBottom: '0.5rem', textTransform: 'uppercase' }}>
+                      {['Produto', 'Qtd', 'Unit', 'Total', ''].map((col) => (
+                        <th
+                          key={col}
+                          style={{
+                            fontFamily: 'var(--font-label)',
+                            fontSize: '0.65rem',
+                            letterSpacing: '0.1em',
+                            color: 'var(--gray)',
+                            textAlign: 'left',
+                            paddingBottom: '0.5rem',
+                            textTransform: 'uppercase',
+                          }}
+                        >
                           {col}
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {cart.map(item => (
+                    {cart.map((item) => (
                       <tr key={item.variantId} style={{ borderTop: '1px solid var(--black4)' }}>
                         <td style={{ padding: '0.5rem 0', paddingRight: '0.5rem' }}>
-                          <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.8rem', color: 'var(--white)', marginBottom: '0.15rem' }}>
+                          <p
+                            style={{
+                              fontFamily: 'var(--font-body)',
+                              fontSize: '0.8rem',
+                              color: 'var(--white)',
+                              marginBottom: '0.15rem',
+                            }}
+                          >
                             {item.productNome}
                           </p>
-                          <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.65rem', color: 'var(--gray)', letterSpacing: '0.05em' }}>
+                          <p
+                            style={{
+                              fontFamily: 'var(--font-label)',
+                              fontSize: '0.65rem',
+                              color: 'var(--gray)',
+                              letterSpacing: '0.05em',
+                            }}
+                          >
                             {item.tamanho} / {item.cor}
                           </p>
                         </td>
                         <td style={{ padding: '0.5rem 0.25rem', whiteSpace: 'nowrap' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                            <button onClick={() => updateQty(item.variantId, item.quantidade - 1)} style={{ ...rowActionButton, padding: '0.2rem 0.4rem', fontSize: '0.75rem' }}>−</button>
-                            <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.8rem', color: 'var(--white)', minWidth: '1.5rem', textAlign: 'center' }}>{item.quantidade}</span>
-                            <button onClick={() => updateQty(item.variantId, item.quantidade + 1)} disabled={item.quantidade >= item.estoqueDisponivel} style={{ ...rowActionButton, padding: '0.2rem 0.4rem', fontSize: '0.75rem' }}>+</button>
+                            <button
+                              onClick={() => updateQty(item.variantId, item.quantidade - 1)}
+                              style={{
+                                ...rowActionButton,
+                                padding: '0.2rem 0.4rem',
+                                fontSize: '0.75rem',
+                              }}
+                            >
+                              −
+                            </button>
+                            <span
+                              style={{
+                                fontFamily: 'var(--font-body)',
+                                fontSize: '0.8rem',
+                                color: 'var(--white)',
+                                minWidth: '1.5rem',
+                                textAlign: 'center',
+                              }}
+                            >
+                              {item.quantidade}
+                            </span>
+                            <button
+                              onClick={() => updateQty(item.variantId, item.quantidade + 1)}
+                              disabled={item.quantidade >= item.estoqueDisponivel}
+                              style={{
+                                ...rowActionButton,
+                                padding: '0.2rem 0.4rem',
+                                fontSize: '0.75rem',
+                              }}
+                            >
+                              +
+                            </button>
                           </div>
                         </td>
-                        <td style={{ padding: '0.5rem 0.25rem', fontFamily: 'var(--font-body)', fontSize: '0.8rem', color: 'var(--gray)', whiteSpace: 'nowrap' }}>
+                        <td
+                          style={{
+                            padding: '0.5rem 0.25rem',
+                            fontFamily: 'var(--font-body)',
+                            fontSize: '0.8rem',
+                            color: 'var(--gray)',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           {formatMoney(item.precoUnitario)}
                         </td>
-                        <td style={{ padding: '0.5rem 0.25rem', fontFamily: 'var(--font-body)', fontSize: '0.8rem', color: 'var(--white)', whiteSpace: 'nowrap' }}>
+                        <td
+                          style={{
+                            padding: '0.5rem 0.25rem',
+                            fontFamily: 'var(--font-body)',
+                            fontSize: '0.8rem',
+                            color: 'var(--white)',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
                           {formatMoney(item.precoUnitario * item.quantidade)}
                         </td>
                         <td style={{ padding: '0.5rem 0' }}>
-                          <button onClick={() => removeFromCart(item.variantId)} style={rowDangerButton}>×</button>
+                          <button
+                            onClick={() => removeFromCart(item.variantId)}
+                            style={rowDangerButton}
+                          >
+                            ×
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -269,10 +460,15 @@ export function PdvPage() {
             <div style={{ marginBottom: '1.25rem' }}>
               <label style={label}>Forma de pagamento</label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-                {paymentOptions.map(opt => (
+                {paymentOptions.map((opt) => (
                   <button
                     key={opt.value}
-                    onClick={() => { setFormaPagamento(opt.value); setSelectedCustomer(null); setCustomerSearch(''); setErrorMsg(null) }}
+                    onClick={() => {
+                      setFormaPagamento(opt.value)
+                      setSelectedCustomer(null)
+                      setCustomerSearch('')
+                      setErrorMsg(null)
+                    }}
                     style={{
                       padding: '0.5rem',
                       background: formaPagamento === opt.value ? 'var(--white)' : 'var(--black3)',
@@ -298,15 +494,42 @@ export function PdvPage() {
             <div style={{ marginBottom: '1.25rem' }}>
               <label style={label}>
                 Cliente{' '}
-                {formaPagamento === 'CREDIARIO'
-                  ? <span style={{ color: 'var(--danger)', fontWeight: 600 }}>*</span>
-                  : <span style={{ color: 'var(--gray)', fontWeight: 400 }}>(opcional)</span>
-                }
+                {formaPagamento === CREDIARIO ? (
+                  <span style={{ color: 'var(--danger)', fontWeight: 600 }}>*</span>
+                ) : (
+                  <span style={{ color: 'var(--gray)', fontWeight: 400 }}>(opcional)</span>
+                )}
               </label>
               {selectedCustomer ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--black3)', border: '1px solid var(--black4)', borderRadius: 'var(--radius)', padding: '0.5rem 0.75rem' }}>
-                  <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--white)' }}>{selectedCustomer.nome}</span>
-                  <button onClick={() => { setSelectedCustomer(null); setCustomerSearch('') }} style={{ ...rowActionButton, fontSize: '0.65rem' }}>Trocar</button>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    background: 'var(--black3)',
+                    border: '1px solid var(--black4)',
+                    borderRadius: 'var(--radius)',
+                    padding: '0.5rem 0.75rem',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      fontSize: '0.875rem',
+                      color: 'var(--white)',
+                    }}
+                  >
+                    {selectedCustomer.nome}
+                  </span>
+                  <button
+                    onClick={() => {
+                      setSelectedCustomer(null)
+                      setCustomerSearch('')
+                    }}
+                    style={{ ...rowActionButton, fontSize: '0.65rem' }}
+                  >
+                    Trocar
+                  </button>
                 </div>
               ) : (
                 <>
@@ -314,15 +537,18 @@ export function PdvPage() {
                     type="text"
                     placeholder="Nome, telefone ou CPF..."
                     value={customerSearch}
-                    onChange={e => setCustomerSearch(e.target.value)}
+                    onChange={(e) => setCustomerSearch(e.target.value)}
                     style={{ ...input, marginBottom: '0.5rem' }}
                   />
                   {customerResults.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                      {customerResults.map(c => (
+                      {customerResults.map((c) => (
                         <button
                           key={c.id}
-                          onClick={() => { setSelectedCustomer({ id: c.id, nome: c.nome }); setCustomerSearch('') }}
+                          onClick={() => {
+                            setSelectedCustomer({ id: c.id, nome: c.nome })
+                            setCustomerSearch('')
+                          }}
                           style={{
                             display: 'flex',
                             justifyContent: 'space-between',
@@ -340,7 +566,13 @@ export function PdvPage() {
                         >
                           <span>{c.nome}</span>
                           {c.saldoDevedor > 0 && (
-                            <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.65rem', color: 'var(--danger)' }}>
+                            <span
+                              style={{
+                                fontFamily: 'var(--font-label)',
+                                fontSize: '0.65rem',
+                                color: 'var(--danger)',
+                              }}
+                            >
                               Saldo: {formatMoney(c.saldoDevedor)}
                             </span>
                           )}
@@ -349,24 +581,68 @@ export function PdvPage() {
                     </div>
                   )}
                   {customerSearch.length >= 1 && customerResults.length === 0 && (
-                    <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.8rem' }}>Nenhum cliente encontrado</p>
+                    <p
+                      style={{
+                        color: 'var(--gray)',
+                        fontFamily: 'var(--font-body)',
+                        fontSize: '0.8rem',
+                      }}
+                    >
+                      Nenhum cliente encontrado
+                    </p>
                   )}
                 </>
               )}
             </div>
 
             {/* Total */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--black4)', paddingTop: '1rem', marginBottom: '1rem' }}>
-              <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.8rem', letterSpacing: '0.1em', color: 'var(--gray)', textTransform: 'uppercase' }}>Total</span>
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: 'var(--white)' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderTop: '1px solid var(--black4)',
+                paddingTop: '1rem',
+                marginBottom: '1rem',
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: 'var(--font-label)',
+                  fontSize: '0.8rem',
+                  letterSpacing: '0.1em',
+                  color: 'var(--gray)',
+                  textTransform: 'uppercase',
+                }}
+              >
+                Total
+              </span>
+              <span
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontSize: '1.5rem',
+                  color: 'var(--white)',
+                }}
+              >
                 {formatMoney(total)}
               </span>
             </div>
 
             {/* Messages */}
-            {errorMsg && <p style={{ ...fieldError, marginBottom: '0.75rem', fontSize: '0.8rem' }}>{errorMsg}</p>}
+            {errorMsg && (
+              <p style={{ ...fieldError, marginBottom: '0.75rem', fontSize: '0.8rem' }}>
+                {errorMsg}
+              </p>
+            )}
             {successMsg && (
-              <p style={{ color: 'var(--success)', fontSize: '0.8rem', fontFamily: 'var(--font-body)', marginBottom: '0.75rem' }}>
+              <p
+                style={{
+                  color: 'var(--success)',
+                  fontSize: '0.8rem',
+                  fontFamily: 'var(--font-body)',
+                  marginBottom: '0.75rem',
+                }}
+              >
                 {successMsg}
               </p>
             )}
