@@ -1,10 +1,56 @@
-import { ReactNode } from 'react'
+import { ReactNode, CSSProperties } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 interface LayoutProps {
   children: ReactNode
 }
+
+type NavItem =
+  | { type: 'link'; to: string; label: string; adminOnly?: boolean }
+  | { type: 'separator'; key: string; label: string; adminOnly?: boolean }
+
+function navItems({ role }: { role?: string }): NavItem[] {
+  const isAdmin = role === 'admin'
+  const items: NavItem[] = [
+    { type: 'separator', key: 'sep-op', label: 'Operação' },
+    { type: 'link', to: '/pdv', label: 'PDV' },
+  ]
+  if (isAdmin) {
+    items.push(
+      { type: 'link', to: '/vendas', label: 'Vendas' },
+      { type: 'link', to: '/crediario', label: 'Crediário' },
+    )
+  }
+  items.push(
+    { type: 'separator', key: 'sep-cad', label: 'Cadastros' },
+    { type: 'link', to: '/clientes', label: 'Clientes' },
+  )
+  if (isAdmin) {
+    items.push({ type: 'link', to: '/produtos', label: 'Produtos' })
+    items.push(
+      { type: 'separator', key: 'sep-ins', label: 'Gestão' },
+      { type: 'link', to: '/', label: 'Dashboard' },
+      { type: 'link', to: '/relatorios', label: 'Relatórios' },
+      { type: 'link', to: '/configuracoes', label: 'Configurações' },
+    )
+  }
+  return items
+}
+
+const navLinkStyle = ({ isActive }: { isActive: boolean }): CSSProperties => ({
+  display: 'block',
+  padding: '0.625rem 0.75rem',
+  borderRadius: 'var(--radius)',
+  fontFamily: 'var(--font-label)',
+  fontSize: '0.8rem',
+  letterSpacing: '0.1em',
+  textTransform: 'uppercase',
+  color: isActive ? 'var(--white)' : 'var(--gray)',
+  background: isActive ? 'var(--black3)' : 'transparent',
+  transition: 'all var(--transition)',
+  textDecoration: 'none',
+})
 
 export function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuth()
@@ -43,145 +89,24 @@ export function Layout({ children }: LayoutProps) {
         </div>
 
         {/* Navegação */}
-        <nav style={{ flex: 1, padding: '0 0.75rem' }}>
-          {/* PDV — acessível por todos os usuários autenticados */}
-          <NavLink
-            to="/pdv"
-            style={({ isActive }) => ({
-              display: 'block',
-              padding: '0.625rem 0.75rem',
-              borderRadius: 'var(--radius)',
-              fontFamily: 'var(--font-label)',
-              fontSize: '0.8rem',
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase' as const,
-              color: isActive ? 'var(--white)' : 'var(--gray)',
-              background: isActive ? 'var(--black3)' : 'transparent',
-              transition: 'all var(--transition)',
-              textDecoration: 'none',
-              marginBottom: '0.25rem',
-            })}
-          >
-            PDV
-          </NavLink>
-
-          {/* Clientes — acessível por todos os usuários autenticados */}
-          <NavLink
-            to="/clientes"
-            style={({ isActive }) => ({
-              display: 'block',
-              padding: '0.625rem 0.75rem',
-              borderRadius: 'var(--radius)',
-              fontFamily: 'var(--font-label)',
-              fontSize: '0.8rem',
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase' as const,
-              color: isActive ? 'var(--white)' : 'var(--gray)',
-              background: isActive ? 'var(--black3)' : 'transparent',
-              transition: 'all var(--transition)',
-              textDecoration: 'none',
-              marginBottom: '0.25rem',
-            })}
-          >
-            Clientes
-          </NavLink>
-          {user?.role === 'admin' && (
-            <>
-              <NavLink
-                to="/vendas"
-                style={({ isActive }) => ({
-                  display: 'block',
-                  padding: '0.625rem 0.75rem',
-                  borderRadius: 'var(--radius)',
-                  fontFamily: 'var(--font-label)',
-                  fontSize: '0.8rem',
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                  color: isActive ? 'var(--white)' : 'var(--gray)',
-                  background: isActive ? 'var(--black3)' : 'transparent',
-                  transition: 'all var(--transition)',
-                  textDecoration: 'none',
-                  marginBottom: '0.25rem',
-                })}
-              >
-                Vendas
+        <nav style={{ flex: 1, padding: '0 0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+          {navItems({ role: user?.role }).map((item) =>
+            item.type === 'separator' ? (
+              <div key={item.key} style={{
+                fontFamily: 'var(--font-label)',
+                fontSize: '0.65rem',
+                letterSpacing: '0.15em',
+                textTransform: 'uppercase',
+                color: 'var(--gray2)',
+                padding: '0.75rem 0.75rem 0.25rem',
+              }}>
+                {item.label}
+              </div>
+            ) : (
+              <NavLink key={item.to} to={item.to} style={navLinkStyle}>
+                {item.label}
               </NavLink>
-              <NavLink
-                to="/crediario"
-                style={({ isActive }) => ({
-                  display: 'block',
-                  padding: '0.625rem 0.75rem',
-                  borderRadius: 'var(--radius)',
-                  fontFamily: 'var(--font-label)',
-                  fontSize: '0.8rem',
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                  color: isActive ? 'var(--white)' : 'var(--gray)',
-                  background: isActive ? 'var(--black3)' : 'transparent',
-                  transition: 'all var(--transition)',
-                  textDecoration: 'none',
-                  marginBottom: '0.25rem',
-                })}
-              >
-                Crediário
-              </NavLink>
-              <NavLink
-                to="/relatorios"
-                style={({ isActive }) => ({
-                  display: 'block',
-                  padding: '0.625rem 0.75rem',
-                  borderRadius: 'var(--radius)',
-                  fontFamily: 'var(--font-label)',
-                  fontSize: '0.8rem',
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                  color: isActive ? 'var(--white)' : 'var(--gray)',
-                  background: isActive ? 'var(--black3)' : 'transparent',
-                  transition: 'all var(--transition)',
-                  textDecoration: 'none',
-                  marginBottom: '0.25rem',
-                })}
-              >
-                Relatorios
-              </NavLink>
-              <NavLink
-                to="/produtos"
-                style={({ isActive }) => ({
-                  display: 'block',
-                  padding: '0.625rem 0.75rem',
-                  borderRadius: 'var(--radius)',
-                  fontFamily: 'var(--font-label)',
-                  fontSize: '0.8rem',
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                  color: isActive ? 'var(--white)' : 'var(--gray)',
-                  background: isActive ? 'var(--black3)' : 'transparent',
-                  transition: 'all var(--transition)',
-                  textDecoration: 'none',
-                  marginBottom: '0.25rem',
-                })}
-              >
-                Produtos
-              </NavLink>
-              <NavLink
-                to="/configuracoes"
-                style={({ isActive }) => ({
-                  display: 'block',
-                  padding: '0.625rem 0.75rem',
-                  borderRadius: 'var(--radius)',
-                  fontFamily: 'var(--font-label)',
-                  fontSize: '0.8rem',
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                  color: isActive ? 'var(--white)' : 'var(--gray)',
-                  background: isActive ? 'var(--black3)' : 'transparent',
-                  transition: 'all var(--transition)',
-                  textDecoration: 'none',
-                })}
-              >
-                Configurações
-              </NavLink>
-            </>
+            )
           )}
         </nav>
 

@@ -1,37 +1,14 @@
 import { useState } from 'react'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
+import {
+  type CartItem, type Product, type ProductVariant, type FormaPagamento,
+  addItemToCart, removeItemFromCart, updateItemQty, cartTotal, formatMoney, validateCheckout,
+} from '../utils/cart'
 import {
   pageTitle, sectionHeader, card, input, label,
   primaryButton, rowActionButton, rowDangerButton, badge, fieldError,
 } from '../styles/ui'
-
-interface ProductVariant {
-  id: string
-  tamanho: string
-  cor: string
-  estoque: number
-}
-
-interface Product {
-  id: string
-  nome: string
-  sku: string
-  preco: number
-  variants: ProductVariant[]
-}
-
-interface CartItem {
-  variantId: string
-  productNome: string
-  tamanho: string
-  cor: string
-  precoUnitario: number
-  quantidade: number
-  estoqueDisponivel: number
-}
-
-type FormaPagamento = 'PIX' | 'DINHEIRO' | 'CARTAO' | 'CREDIARIO'
 
 interface CustomerResult {
   id: string
@@ -40,11 +17,8 @@ interface CustomerResult {
   saldoDevedor: number
 }
 
-function formatMoney(value: number): string {
-  return `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-}
-
 export function PdvPage() {
+  const queryClient = useQueryClient()
   const [searchInput, setSearchInput] = useState('')
   const [cart, setCart] = useState<CartItem[]>([])
   const [formaPagamento, setFormaPagamento] = useState<FormaPagamento | null>(null)
@@ -77,8 +51,8 @@ export function PdvPage() {
 
   const { data: customersData } = useQuery({
     queryKey: ['customers-search', customerSearch],
-    queryFn: () => api.get<{ customers: CustomerResult[] }>('/customers/search?q=' + customerSearch).then(r => r.data.customers),
-    enabled: customerSearch.length > 1,
+    queryFn: () => api.get<{ customers: CustomerResult[] }>('/customers/search?q=' + encodeURIComponent(customerSearch)).then(r => r.data.customers),
+    enabled: customerSearch.length >= 1,
     staleTime: 10_000,
   })
   const customerResults = customersData ?? []
@@ -88,63 +62,28 @@ export function PdvPage() {
   })
 
   function addToCart(variant: ProductVariant, product: Product) {
-    setCart(prev => {
-      const existing = prev.find(i => i.variantId === variant.id)
-      if (existing) {
-        return prev.map(i =>
-          i.variantId === variant.id
-            ? { ...i, quantidade: Math.min(i.quantidade + 1, i.estoqueDisponivel) }
-            : i
-        )
-      }
-      return [...prev, {
-        variantId: variant.id,
-        productNome: product.nome,
-        tamanho: variant.tamanho,
-        cor: variant.cor,
-        precoUnitario: product.preco,
-        quantidade: 1,
-        estoqueDisponivel: variant.estoque,
-      }]
-    })
+    setCart(prev => addItemToCart(prev, variant, product))
     setErrorMsg(null)
     setSuccessMsg(null)
   }
 
   function removeFromCart(variantId: string) {
-    setCart(prev => prev.filter(i => i.variantId !== variantId))
+    setCart(prev => removeItemFromCart(prev, variantId))
   }
 
   function updateQty(variantId: string, quantidade: number) {
-    if (quantidade <= 0) {
-      removeFromCart(variantId)
-      return
-    }
-    setCart(prev =>
-      prev.map(i =>
-        i.variantId === variantId
-          ? { ...i, quantidade: Math.min(quantidade, i.estoqueDisponivel) }
-          : i
-      )
-    )
+    setCart(prev => updateItemQty(prev, variantId, quantidade))
   }
 
-  const cartTotal = cart.reduce((sum, i) => sum + i.precoUnitario * i.quantidade, 0)
+  const total = cartTotal(cart)
 
   function handleCheckout() {
     setErrorMsg(null)
     setSuccessMsg(null)
 
-    if (cart.length === 0) {
-      setErrorMsg('Adicione produtos à sacola')
-      return
-    }
-    if (!formaPagamento) {
-      setErrorMsg('Selecione forma de pagamento')
-      return
-    }
-    if (formaPagamento === 'CREDIARIO' && !selectedCustomer) {
-      setErrorMsg('Selecione um cliente para Crediário')
+    const error = validateCheckout(cart, formaPagamento, selectedCustomer?.id ?? null)
+    if (error) {
+      setErrorMsg(error)
       return
     }
 
@@ -166,6 +105,7 @@ export function PdvPage() {
         setCustomerSearch('')
         setFormaPagamento(null)
         setSuccessMsg('Venda fechada com sucesso!')
+        queryClient.invalidateQueries({ queryKey: ['pdv-catalog'] })
       },
       onError: (err: unknown) => {
         const e = err as { response?: { data?: { message?: string } } }
@@ -408,7 +348,7 @@ export function PdvPage() {
                       ))}
                     </div>
                   )}
-                  {customerSearch.length > 1 && customerResults.length === 0 && (
+                  {customerSearch.length >= 1 && customerResults.length === 0 && (
                     <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.8rem' }}>Nenhum cliente encontrado</p>
                   )}
                 </>
@@ -419,7 +359,7 @@ export function PdvPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--black4)', paddingTop: '1rem', marginBottom: '1rem' }}>
               <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.8rem', letterSpacing: '0.1em', color: 'var(--gray)', textTransform: 'uppercase' }}>Total</span>
               <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: 'var(--white)' }}>
-                {formatMoney(cartTotal)}
+                {formatMoney(total)}
               </span>
             </div>
 

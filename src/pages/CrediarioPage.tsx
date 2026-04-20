@@ -6,15 +6,26 @@ import {
   card, label, input, primaryButton, fieldError, badge,
 } from '../styles/ui'
 
+interface CrediarioSale {
+  id: string
+  total: number
+  createdAt: string
+}
+
 interface Devedor {
   id: string
   nome: string
   saldoDevedor: number
   telefone: string
+  crediarioSales?: CrediarioSale[]
 }
 
 function formatMoney(value: number): string {
   return `R$ ${Number(value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 export function CrediarioPage() {
@@ -31,6 +42,22 @@ export function CrediarioPage() {
   const devedores = data ?? []
 
   const selectedDevedor = devedores.find(d => d.id === selectedCustomerId) ?? null
+
+  // Filters
+  const [filterSearch, setFilterSearch] = useState('')
+  const [filterOrder, setFilterOrder] = useState<'nome' | 'saldo_desc' | 'saldo_asc'>('nome')
+
+  const filteredDevedores = devedores
+    .filter(d => {
+      if (!filterSearch.trim()) return true
+      const q = filterSearch.trim().toLowerCase()
+      return d.nome.toLowerCase().includes(q) || d.telefone.toLowerCase().includes(q)
+    })
+    .sort((a, b) => {
+      if (filterOrder === 'saldo_desc') return b.saldoDevedor - a.saldoDevedor
+      if (filterOrder === 'saldo_asc') return a.saldoDevedor - b.saldoDevedor
+      return a.nome.localeCompare(b.nome)
+    })
 
   const paymentMutation = useMutation({
     mutationFn: (body: { customerId: string; valor: number }) =>
@@ -81,13 +108,35 @@ export function CrediarioPage() {
         <section>
           <h2 style={sectionHeader}>Clientes devedores</h2>
 
+          {/* Filters */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+            <input
+              type="text"
+              value={filterSearch}
+              onChange={e => setFilterSearch(e.target.value)}
+              placeholder="Buscar por nome ou telefone..."
+              style={{ ...input, flex: '1 1 240px', minWidth: '200px' }}
+            />
+            <select
+              value={filterOrder}
+              onChange={e => setFilterOrder(e.target.value as 'nome' | 'saldo_desc' | 'saldo_asc')}
+              style={{ ...input, flex: '0 0 180px', cursor: 'pointer' }}
+            >
+              <option value="nome">Ordenar por nome</option>
+              <option value="saldo_desc">Maior saldo devedor</option>
+              <option value="saldo_asc">Menor saldo devedor</option>
+            </select>
+          </div>
+
           {isPending ? (
             <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>Carregando...</p>
           ) : devedores.length === 0 ? (
             <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>Nenhum cliente com saldo devedor.</p>
+          ) : filteredDevedores.length === 0 ? (
+            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>Nenhum devedor corresponde aos filtros.</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {devedores.map(devedor => (
+              {filteredDevedores.map(devedor => (
                 <button
                   key={devedor.id}
                   onClick={() => {
@@ -109,13 +158,18 @@ export function CrediarioPage() {
                     transition: 'all var(--transition)',
                   }}
                 >
-                  <div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.9rem', color: 'var(--white)', fontWeight: 500, marginBottom: '0.2rem' }}>
                       {devedor.nome}
                     </p>
-                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.8rem', color: 'var(--gray)' }}>
+                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.8rem', color: 'var(--gray)', marginBottom: '0.35rem' }}>
                       {devedor.telefone}
                     </p>
+                    {devedor.crediarioSales && devedor.crediarioSales.length > 0 && (
+                      <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.7rem', color: 'var(--gray)', letterSpacing: '0.05em' }}>
+                        Compras: {devedor.crediarioSales.map(s => formatDate(s.createdAt)).join(' · ')}
+                      </p>
+                    )}
                   </div>
                   <div style={{ flexShrink: 0, textAlign: 'right' }}>
                     <span style={badge('danger')}>
@@ -149,6 +203,32 @@ export function CrediarioPage() {
                   </div>
                 )}
               </div>
+
+              {selectedDevedor?.crediarioSales && selectedDevedor.crediarioSales.length > 0 && (
+                <div>
+                  <label style={label}>Compras no crediário</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    {selectedDevedor.crediarioSales.map(s => (
+                      <div key={s.id} style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '0.45rem 0.65rem',
+                        background: 'var(--black3)',
+                        border: '1px solid var(--black4)',
+                        borderRadius: 'var(--radius)',
+                      }}>
+                        <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.8rem', color: 'var(--white)' }}>
+                          {formatDate(s.createdAt)}
+                        </span>
+                        <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.8rem', color: 'var(--gray)' }}>
+                          {formatMoney(s.total)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label style={label}>Valor do pagamento (R$)</label>

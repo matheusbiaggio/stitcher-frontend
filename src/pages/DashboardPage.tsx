@@ -3,6 +3,18 @@ import { api } from '../lib/api'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { pageTitle, sectionHeader } from '../styles/ui'
 
+interface SaleItem {
+  id: string
+  quantidade: number
+  precoUnitario: number
+  variant: {
+    id: string
+    tamanho: string
+    cor: string
+    product: { id: string; nome: string; sku: string }
+  }
+}
+
 interface DashboardData {
   today: { totalVendas: number; receita: number }
   dailyRevenue: { dia: string; receita: number }[]
@@ -11,11 +23,19 @@ interface DashboardData {
     createdAt: string;
     customer: { id: string; nome: string } | null;
     user: { id: string; nome: string };
+    itens: SaleItem[];
   }[]
   lowStockAlerts: {
     id: string; productName: string; tamanho: string; cor: string;
     estoque: number; estoqueMinimo: number;
   }[]
+}
+
+function formatItems(itens: SaleItem[]): string {
+  if (!itens || itens.length === 0) return '---'
+  return itens
+    .map(i => `${i.variant.product.nome} (${i.variant.tamanho}/${i.variant.cor}) ×${i.quantidade}`)
+    .join(', ')
 }
 
 function formatMoney(value: number): string {
@@ -162,6 +182,7 @@ export function DashboardPage() {
                 <tr>
                   <th style={tableHeader}>Data</th>
                   <th style={tableHeader}>Cliente</th>
+                  <th style={tableHeader}>Itens</th>
                   <th style={tableHeader}>Operador</th>
                   <th style={tableHeader}>Pagamento</th>
                   <th style={{ ...tableHeader, textAlign: 'right' }}>Total</th>
@@ -173,6 +194,9 @@ export function DashboardPage() {
                     <td style={tableCell}>{formatDate(sale.createdAt)}</td>
                     <td style={{ ...tableCell, color: sale.customer ? 'var(--white)' : 'var(--gray)' }}>
                       {sale.customer?.nome ?? '---'}
+                    </td>
+                    <td style={{ ...tableCell, color: 'var(--gray)', fontSize: '0.75rem' }}>
+                      {formatItems(sale.itens)}
                     </td>
                     <td style={{ ...tableCell, color: 'var(--gray)' }}>{sale.user.nome}</td>
                     <td style={tableCell}>{sale.formaPagamento}</td>

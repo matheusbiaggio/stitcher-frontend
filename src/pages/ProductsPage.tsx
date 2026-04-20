@@ -140,6 +140,10 @@ export function ProductsPage() {
     mutationFn: (id: string) => api.patch(`/products/${id}/deactivate`),
   })
 
+  const activateMutation = useMutation({
+    mutationFn: (id: string) => api.patch(`/products/${id}/activate`),
+  })
+
   const stockMutation = useMutation({
     mutationFn: ({ productId, variantId, quantidade }: { productId: string; variantId: string; quantidade: number }) =>
       api.patch(`/products/${productId}/variants/${variantId}/stock`, { quantidade }),
@@ -169,6 +173,28 @@ export function ProductsPage() {
   const [newVariantForm, setNewVariantForm] = useState<NewVariantForm>(NEW_VARIANT_EMPTY)
   const [form, setForm] = useState<CreateProductForm>(FORM_EMPTY)
   const [formErrors, setFormErrors] = useState<FormErrors>({})
+
+  // Filters
+  const [filterSearch, setFilterSearch] = useState('')
+  const [filterCategoria, setFilterCategoria] = useState('')
+  const [filterStatus, setFilterStatus] = useState<'all' | 'ativo' | 'inativo'>('all')
+
+  const categorias = Array.from(new Set(products.map(p => p.categoria))).sort()
+
+  const filteredProducts = products.filter(p => {
+    if (filterStatus === 'ativo' && !p.ativo) return false
+    if (filterStatus === 'inativo' && p.ativo) return false
+    if (filterCategoria && p.categoria !== filterCategoria) return false
+    if (filterSearch.trim()) {
+      const q = filterSearch.trim().toLowerCase()
+      const matchProduct = p.nome.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)
+      const matchVariant = p.variants.some(v =>
+        v.tamanho.toLowerCase().includes(q) || v.cor.toLowerCase().includes(q)
+      )
+      if (!matchProduct && !matchVariant) return false
+    }
+    return true
+  })
 
   function openEditProduct(product: Product) {
     setEditingProduct({
@@ -273,6 +299,14 @@ export function ProductsPage() {
     })
   }
 
+  function handleActivate(id: string) {
+    activateMutation.mutate(id, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['products'] })
+      },
+    })
+  }
+
   function handleStockSubmit(e: FormEvent) {
     e.preventDefault()
     if (!stockEntry) return
@@ -334,13 +368,43 @@ export function ProductsPage() {
             Catálogo de produtos
           </h2>
 
+          {/* Filters */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+            <input
+              type="text"
+              value={filterSearch}
+              onChange={e => setFilterSearch(e.target.value)}
+              placeholder="Buscar por nome, SKU, tamanho ou cor..."
+              style={{ ...inputStyle, flex: '1 1 240px', minWidth: '200px' }}
+            />
+            <select
+              value={filterCategoria}
+              onChange={e => setFilterCategoria(e.target.value)}
+              style={{ ...inputStyle, flex: '0 0 160px', cursor: 'pointer' }}
+            >
+              <option value="">Todas categorias</option>
+              {categorias.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <select
+              value={filterStatus}
+              onChange={e => setFilterStatus(e.target.value as 'all' | 'ativo' | 'inativo')}
+              style={{ ...inputStyle, flex: '0 0 130px', cursor: 'pointer' }}
+            >
+              <option value="all">Todos</option>
+              <option value="ativo">Ativos</option>
+              <option value="inativo">Inativos</option>
+            </select>
+          </div>
+
           {isPending ? (
             <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>Carregando...</p>
           ) : products.length === 0 ? (
             <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>Nenhum produto cadastrado.</p>
+          ) : filteredProducts.length === 0 ? (
+            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>Nenhum produto corresponde aos filtros.</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {products.map((product) => (
+              {filteredProducts.map((product) => (
                 <div
                   key={product.id}
                   style={{
@@ -436,7 +500,7 @@ export function ProductsPage() {
                         {editingProduct?.id === product.id ? 'Fechar' : 'Editar'}
                       </button>
 
-                      {product.ativo && (
+                      {product.ativo ? (
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDeactivate(product.id) }}
                           disabled={deactivateMutation.isPending}
@@ -454,6 +518,25 @@ export function ProductsPage() {
                           }}
                         >
                           Desativar
+                        </button>
+                      ) : (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleActivate(product.id) }}
+                          disabled={activateMutation.isPending}
+                          style={{
+                            padding: '0.3rem 0.6rem',
+                            background: 'transparent',
+                            border: '1px solid var(--success)',
+                            borderRadius: 'var(--radius)',
+                            color: 'var(--success)',
+                            fontFamily: 'var(--font-label)',
+                            fontSize: '0.65rem',
+                            letterSpacing: '0.1em',
+                            textTransform: 'uppercase',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Reativar
                         </button>
                       )}
 

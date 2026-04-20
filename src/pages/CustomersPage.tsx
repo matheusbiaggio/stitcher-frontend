@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
+import { validateCPF, validateBRPhone } from '@bonistore/shared'
 import {
   pageTitle, sectionHeader, listFormLayout, formPanel, formPanelTitle,
   card, inlineForm, label, input, fieldError,
@@ -38,30 +39,6 @@ function formatCurrency(value: number): string {
   return `R$ ${Number(value).toFixed(2).replace('.', ',')}`
 }
 
-/** Full Brazilian CPF check-digit validation */
-function validateCPF(cpf: string): boolean {
-  const d = cpf.replace(/\D/g, '')
-  if (d.length !== 11) return false
-  if (/^(\d)\1{10}$/.test(d)) return false // all same digit
-  let sum = 0
-  for (let i = 0; i < 9; i++) sum += parseInt(d[i]) * (10 - i)
-  let rem = sum % 11
-  const d10 = rem < 2 ? 0 : 11 - rem
-  if (parseInt(d[9]) !== d10) return false
-  sum = 0
-  for (let i = 0; i < 10; i++) sum += parseInt(d[i]) * (11 - i)
-  rem = sum % 11
-  const d11 = rem < 2 ? 0 : 11 - rem
-  return parseInt(d[10]) === d11
-}
-
-/** Brazilian phone: 10 digits (landline DDD+8) or 11 digits (mobile DDD+9XXXXXXXX) */
-function validateBRPhone(phone: string): boolean {
-  const d = phone.replace(/\D/g, '')
-  if (d.length === 10) return true
-  if (d.length === 11 && d[2] === '9') return true
-  return false
-}
 
 function validateForm(form: CustomerForm): FormErrors {
   const errors: FormErrors = {}
@@ -114,6 +91,28 @@ export function CustomersPage() {
     queryFn: () => api.get<{ customers: Customer[] }>('/customers').then(r => r.data.customers),
   })
   const customers = data ?? []
+
+  // Filters
+  const [filterSearch, setFilterSearch] = useState('')
+  const [filterStatus, setFilterStatus] = useState<'all' | 'ativo' | 'inativo'>('all')
+  const [filterDevedor, setFilterDevedor] = useState<'all' | 'devedores' | 'em_dia'>('all')
+
+  const filteredCustomers = customers.filter(c => {
+    if (filterStatus === 'ativo' && !c.ativo) return false
+    if (filterStatus === 'inativo' && c.ativo) return false
+    if (filterDevedor === 'devedores' && c.saldoDevedor <= 0) return false
+    if (filterDevedor === 'em_dia' && c.saldoDevedor > 0) return false
+    if (filterSearch.trim()) {
+      const q = filterSearch.trim().toLowerCase()
+      const match =
+        c.nome.toLowerCase().includes(q) ||
+        c.telefone.toLowerCase().includes(q) ||
+        (c.cpf?.toLowerCase().includes(q) ?? false) ||
+        (c.email?.toLowerCase().includes(q) ?? false)
+      if (!match) return false
+    }
+    return true
+  })
 
   const createMutation = useMutation({
     mutationFn: (body: ReturnType<typeof toApiBody>) =>
@@ -171,13 +170,44 @@ export function CustomersPage() {
         <section>
           <h2 style={sectionHeader}>Cadastro de clientes</h2>
 
+          {/* Filters */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+            <input
+              type="text"
+              value={filterSearch}
+              onChange={e => setFilterSearch(e.target.value)}
+              placeholder="Buscar por nome, telefone, CPF ou email..."
+              style={{ ...input, flex: '1 1 240px', minWidth: '200px' }}
+            />
+            <select
+              value={filterStatus}
+              onChange={e => setFilterStatus(e.target.value as 'all' | 'ativo' | 'inativo')}
+              style={{ ...input, flex: '0 0 130px', cursor: 'pointer' }}
+            >
+              <option value="all">Todos</option>
+              <option value="ativo">Ativos</option>
+              <option value="inativo">Inativos</option>
+            </select>
+            <select
+              value={filterDevedor}
+              onChange={e => setFilterDevedor(e.target.value as 'all' | 'devedores' | 'em_dia')}
+              style={{ ...input, flex: '0 0 150px', cursor: 'pointer' }}
+            >
+              <option value="all">Todos saldos</option>
+              <option value="devedores">Com débito</option>
+              <option value="em_dia">Em dia</option>
+            </select>
+          </div>
+
           {isPending ? (
             <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>Carregando...</p>
           ) : customers.length === 0 ? (
             <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>Nenhum cliente cadastrado.</p>
+          ) : filteredCustomers.length === 0 ? (
+            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>Nenhum cliente corresponde aos filtros.</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {customers.map((customer) => (
+              {filteredCustomers.map((customer) => (
                 <div key={customer.id}>
                   {/* Customer card */}
                   <div style={{ ...card, opacity: customer.ativo ? 1 : 0.6, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
