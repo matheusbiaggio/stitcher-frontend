@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+
 import { LoginPage } from '../LoginPage'
 
 // Mock useAuth
@@ -26,16 +27,16 @@ function renderLogin() {
   return render(
     <MemoryRouter>
       <LoginPage />
-    </MemoryRouter>
+    </MemoryRouter>,
   )
 }
 
 function getEmailInput() {
-  return document.querySelector('input[type="email"]') as HTMLInputElement
+  return document.querySelector('input[type="email"]')!
 }
 
 function getPasswordInput() {
-  return document.querySelector('input[type="password"]') as HTMLInputElement
+  return document.querySelector('input[type="password"]')!
 }
 
 describe('LoginPage', () => {

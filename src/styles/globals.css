@@ -1,4 +1,6 @@
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -28,7 +30,9 @@
   --transition: 150ms ease;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   background-color: var(--black);
   color: var(--white);

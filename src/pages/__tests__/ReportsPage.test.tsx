@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
 import { ReportsPage } from '../ReportsPage'
 
 // Mock api module
@@ -23,7 +24,14 @@ const mockTopProducts = [
 ]
 
 const mockLowStock = [
-  { id: 'v1', productName: 'Blusa Manga', tamanho: 'P', cor: 'Branca', estoque: 1, estoqueMinimo: 5 },
+  {
+    id: 'v1',
+    productName: 'Blusa Manga',
+    tamanho: 'P',
+    cor: 'Branca',
+    estoque: 1,
+    estoqueMinimo: 5,
+  },
 ]
 
 function createQueryClient() {
@@ -39,7 +47,7 @@ function renderReports() {
       <MemoryRouter>
         <ReportsPage />
       </MemoryRouter>
-    </QueryClientProvider>
+    </QueryClientProvider>,
   )
 }
 

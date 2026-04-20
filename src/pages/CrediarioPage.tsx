@@ -1,9 +1,19 @@
-import { useState, FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState, FormEvent } from 'react'
+
 import { api } from '../lib/api'
 import {
-  pageTitle, sectionHeader, listFormLayout, formPanel, formPanelTitle,
-  card, label, input, primaryButton, fieldError, badge,
+  pageTitle,
+  sectionHeader,
+  listFormLayout,
+  formPanel,
+  formPanelTitle,
+  card,
+  label,
+  input,
+  primaryButton,
+  fieldError,
+  badge,
 } from '../styles/ui'
 
 interface CrediarioSale {
@@ -25,7 +35,11 @@ function formatMoney(value: number): string {
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  return new Date(iso).toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
 }
 
 export function CrediarioPage() {
@@ -37,18 +51,19 @@ export function CrediarioPage() {
 
   const { data, isPending } = useQuery({
     queryKey: ['devedores'],
-    queryFn: () => api.get<{ customers: Devedor[] }>('/customers?devedores=true').then(r => r.data.customers),
+    queryFn: () =>
+      api.get<{ customers: Devedor[] }>('/customers?devedores=true').then((r) => r.data.customers),
   })
   const devedores = data ?? []
 
-  const selectedDevedor = devedores.find(d => d.id === selectedCustomerId) ?? null
+  const selectedDevedor = devedores.find((d) => d.id === selectedCustomerId) ?? null
 
   // Filters
   const [filterSearch, setFilterSearch] = useState('')
   const [filterOrder, setFilterOrder] = useState<'nome' | 'saldo_desc' | 'saldo_asc'>('nome')
 
   const filteredDevedores = devedores
-    .filter(d => {
+    .filter((d) => {
       if (!filterSearch.trim()) return true
       const q = filterSearch.trim().toLowerCase()
       return d.nome.toLowerCase().includes(q) || d.telefone.toLowerCase().includes(q)
@@ -61,7 +76,7 @@ export function CrediarioPage() {
 
   const paymentMutation = useMutation({
     mutationFn: (body: { customerId: string; valor: number }) =>
-      api.post('/sales/crediario-payments', body).then(r => r.data),
+      api.post('/sales/crediario-payments', body).then((r) => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['devedores'] })
       setValor('')
@@ -113,13 +128,17 @@ export function CrediarioPage() {
             <input
               type="text"
               value={filterSearch}
-              onChange={e => setFilterSearch(e.target.value)}
+              onChange={(e) => {
+                setFilterSearch(e.target.value)
+              }}
               placeholder="Buscar por nome ou telefone..."
               style={{ ...input, flex: '1 1 240px', minWidth: '200px' }}
             />
             <select
               value={filterOrder}
-              onChange={e => setFilterOrder(e.target.value as 'nome' | 'saldo_desc' | 'saldo_asc')}
+              onChange={(e) => {
+                setFilterOrder(e.target.value as 'nome' | 'saldo_desc' | 'saldo_asc')
+              }}
               style={{ ...input, flex: '0 0 180px', cursor: 'pointer' }}
             >
               <option value="nome">Ordenar por nome</option>
@@ -131,12 +150,16 @@ export function CrediarioPage() {
           {isPending ? (
             <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>Carregando...</p>
           ) : devedores.length === 0 ? (
-            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>Nenhum cliente com saldo devedor.</p>
+            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>
+              Nenhum cliente com saldo devedor.
+            </p>
           ) : filteredDevedores.length === 0 ? (
-            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>Nenhum devedor corresponde aos filtros.</p>
+            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>
+              Nenhum devedor corresponde aos filtros.
+            </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {filteredDevedores.map(devedor => (
+              {filteredDevedores.map((devedor) => (
                 <button
                   key={devedor.id}
                   onClick={() => {
@@ -152,29 +175,51 @@ export function CrediarioPage() {
                     justifyContent: 'space-between',
                     cursor: 'pointer',
                     textAlign: 'left',
-                    background: selectedCustomerId === devedor.id ? 'var(--black3)' : 'var(--black2)',
+                    background:
+                      selectedCustomerId === devedor.id ? 'var(--black3)' : 'var(--black2)',
                     border: `1px solid ${selectedCustomerId === devedor.id ? 'var(--gray)' : 'var(--black4)'}`,
                     width: '100%',
                     transition: 'all var(--transition)',
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.9rem', color: 'var(--white)', fontWeight: 500, marginBottom: '0.2rem' }}>
+                    <p
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        fontSize: '0.9rem',
+                        color: 'var(--white)',
+                        fontWeight: 500,
+                        marginBottom: '0.2rem',
+                      }}
+                    >
                       {devedor.nome}
                     </p>
-                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.8rem', color: 'var(--gray)', marginBottom: '0.35rem' }}>
+                    <p
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        fontSize: '0.8rem',
+                        color: 'var(--gray)',
+                        marginBottom: '0.35rem',
+                      }}
+                    >
                       {devedor.telefone}
                     </p>
                     {devedor.crediarioSales && devedor.crediarioSales.length > 0 && (
-                      <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.7rem', color: 'var(--gray)', letterSpacing: '0.05em' }}>
-                        Compras: {devedor.crediarioSales.map(s => formatDate(s.createdAt)).join(' · ')}
+                      <p
+                        style={{
+                          fontFamily: 'var(--font-label)',
+                          fontSize: '0.7rem',
+                          color: 'var(--gray)',
+                          letterSpacing: '0.05em',
+                        }}
+                      >
+                        Compras:{' '}
+                        {devedor.crediarioSales.map((s) => formatDate(s.createdAt)).join(' · ')}
                       </p>
                     )}
                   </div>
                   <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                    <span style={badge('danger')}>
-                      {formatMoney(devedor.saldoDevedor)}
-                    </span>
+                    <span style={badge('danger')}>{formatMoney(devedor.saldoDevedor)}</span>
                   </div>
                 </button>
               ))}
@@ -187,18 +232,37 @@ export function CrediarioPage() {
           <h2 style={formPanelTitle}>Registrar pagamento</h2>
 
           {!selectedCustomerId ? (
-            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.875rem' }}>
+            <p
+              style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.875rem' }}
+            >
               Selecione um cliente da lista para registrar um pagamento.
             </p>
           ) : (
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <form
+              onSubmit={handleSubmit}
+              style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+            >
               <div>
                 <label style={label}>Cliente selecionado</label>
-                <div style={{ fontFamily: 'var(--font-body)', fontSize: '0.9rem', color: 'var(--white)', marginBottom: '0.25rem' }}>
+                <div
+                  style={{
+                    fontFamily: 'var(--font-body)',
+                    fontSize: '0.9rem',
+                    color: 'var(--white)',
+                    marginBottom: '0.25rem',
+                  }}
+                >
                   {selectedDevedor?.nome}
                 </div>
                 {selectedDevedor && (
-                  <div style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', color: 'var(--danger)', letterSpacing: '0.05em' }}>
+                  <div
+                    style={{
+                      fontFamily: 'var(--font-label)',
+                      fontSize: '0.75rem',
+                      color: 'var(--danger)',
+                      letterSpacing: '0.05em',
+                    }}
+                  >
                     Saldo devedor: {formatMoney(selectedDevedor.saldoDevedor)}
                   </div>
                 )}
@@ -208,20 +272,35 @@ export function CrediarioPage() {
                 <div>
                   <label style={label}>Compras no crediário</label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                    {selectedDevedor.crediarioSales.map(s => (
-                      <div key={s.id} style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: '0.45rem 0.65rem',
-                        background: 'var(--black3)',
-                        border: '1px solid var(--black4)',
-                        borderRadius: 'var(--radius)',
-                      }}>
-                        <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.8rem', color: 'var(--white)' }}>
+                    {selectedDevedor.crediarioSales.map((s) => (
+                      <div
+                        key={s.id}
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: '0.45rem 0.65rem',
+                          background: 'var(--black3)',
+                          border: '1px solid var(--black4)',
+                          borderRadius: 'var(--radius)',
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontFamily: 'var(--font-body)',
+                            fontSize: '0.8rem',
+                            color: 'var(--white)',
+                          }}
+                        >
                           {formatDate(s.createdAt)}
                         </span>
-                        <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.8rem', color: 'var(--gray)' }}>
+                        <span
+                          style={{
+                            fontFamily: 'var(--font-body)',
+                            fontSize: '0.8rem',
+                            color: 'var(--gray)',
+                          }}
+                        >
                           {formatMoney(s.total)}
                         </span>
                       </div>
@@ -235,7 +314,11 @@ export function CrediarioPage() {
                 <input
                   type="text"
                   value={valor}
-                  onChange={e => { setValor(e.target.value); setErrorMsg(null); setSuccessMsg(null) }}
+                  onChange={(e) => {
+                    setValor(e.target.value)
+                    setErrorMsg(null)
+                    setSuccessMsg(null)
+                  }}
                   style={input}
                   placeholder="0,00"
                 />
@@ -245,7 +328,9 @@ export function CrediarioPage() {
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <button
                     type="button"
-                    onClick={() => setValor(String(selectedDevedor.saldoDevedor))}
+                    onClick={() => {
+                      setValor(String(selectedDevedor.saldoDevedor))
+                    }}
                     style={{
                       padding: '0.35rem 0.75rem',
                       background: 'transparent',
@@ -266,7 +351,13 @@ export function CrediarioPage() {
 
               {errorMsg && <p style={fieldError}>{errorMsg}</p>}
               {successMsg && (
-                <p style={{ color: 'var(--success)', fontSize: '0.8rem', fontFamily: 'var(--font-body)' }}>
+                <p
+                  style={{
+                    color: 'var(--success)',
+                    fontSize: '0.8rem',
+                    fontFamily: 'var(--font-body)',
+                  }}
+                >
                   {successMsg}
                 </p>
               )}

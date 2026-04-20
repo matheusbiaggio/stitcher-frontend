@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 export const api = axios.create({
-  baseURL: '/api',       // proxy do Vite em dev, URL absoluta em prod
+  baseURL: '/api', // proxy do Vite em dev, URL absoluta em prod
   withCredentials: true, // OBRIGATÓRIO para enviar httpOnly cookies
   headers: {
     'Content-Type': 'application/json',
@@ -19,5 +19,5 @@ api.interceptors.response.use(
       }
     }
     return Promise.reject(error)
-  }
+  },
 )

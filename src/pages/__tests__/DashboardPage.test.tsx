@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
 import { DashboardPage } from '../DashboardPage'
 
 // Mock api module
@@ -23,7 +24,7 @@ function renderDashboard() {
       <MemoryRouter>
         <DashboardPage />
       </MemoryRouter>
-    </QueryClientProvider>
+    </QueryClientProvider>,
   )
 }
 
@@ -35,7 +36,10 @@ const mockDashboardData = {
   ],
   recentSales: [
     {
-      id: 's1', total: 150, formaPagamento: 'PIX', status: 'COMPLETED',
+      id: 's1',
+      total: 150,
+      formaPagamento: 'PIX',
+      status: 'COMPLETED',
       createdAt: '2026-04-14T10:00:00Z',
       customer: { id: 'c1', nome: 'Maria Silva' },
       user: { id: 'u1', nome: 'Admin' },
@@ -43,8 +47,12 @@ const mockDashboardData = {
   ],
   lowStockAlerts: [
     {
-      id: 'v1', productName: 'Camiseta', tamanho: 'M', cor: 'Azul',
-      estoque: 2, estoqueMinimo: 10,
+      id: 'v1',
+      productName: 'Camiseta',
+      tamanho: 'M',
+      cor: 'Azul',
+      estoque: 2,
+      estoqueMinimo: 10,
     },
   ],
 }
@@ -55,7 +63,7 @@ describe('DashboardPage', () => {
   })
 
   it('renders loading state while data is pending', () => {
-    mockGet.mockReturnValue(new Promise(() => {})) // never resolves
+    mockGet.mockReturnValue(new Promise(() => undefined)) // never resolves
     renderDashboard()
     expect(screen.getByText('Carregando...')).toBeInTheDocument()
   })

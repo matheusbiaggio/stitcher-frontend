@@ -1,5 +1,5 @@
-import { ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 
 export function createTestQueryClient() {
@@ -15,9 +15,7 @@ export function TestWrapper({ children }: { children: ReactNode }) {
   const queryClient = createTestQueryClient()
   return (
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
-        {children}
-      </MemoryRouter>
+      <MemoryRouter>{children}</MemoryRouter>
     </QueryClientProvider>
   )
 }

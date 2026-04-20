@@ -1,7 +1,12 @@
-import { useState, FormEvent } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState, FormEvent } from 'react'
+
 import { api } from '../lib/api'
-import { label as labelStyle, input as inputStyle, inputSmall as smallInputStyle } from '../styles/ui'
+import {
+  label as labelStyle,
+  input as inputStyle,
+  inputSmall as smallInputStyle,
+} from '../styles/ui'
 
 interface Variant {
   id: string
@@ -51,8 +56,8 @@ interface EditProductForm {
   nome: string
   sku: string
   categoria: string
-  preco: string  // centavos digits
-  custo: string  // centavos digits
+  preco: string // centavos digits
+  custo: string // centavos digits
 }
 
 interface NewVariantForm {
@@ -87,7 +92,8 @@ interface FormErrors {
 }
 
 function extractApiErrors(err: unknown): FormErrors {
-  const data = (err as { response?: { data?: { errors?: Record<string, string[]> } } })?.response?.data
+  const data = (err as { response?: { data?: { errors?: Record<string, string[]> } } })?.response
+    ?.data
   if (!data?.errors) return {}
   const map: FormErrors = {}
   const e = data.errors
@@ -121,19 +127,19 @@ function validateForm(form: CreateProductForm): FormErrors {
   return errors
 }
 
-
 export function ProductsPage() {
   const queryClient = useQueryClient()
 
   const { data, isPending } = useQuery({
     queryKey: ['products'],
-    queryFn: () => api.get<{ products: Product[] }>('/products').then(r => r.data.products),
+    queryFn: () => api.get<{ products: Product[] }>('/products').then((r) => r.data.products),
   })
   const products = data ?? []
 
   const createMutation = useMutation({
-    mutationFn: (body: Omit<CreateProductForm, 'preco' | 'custo'> & { preco: number; custo: number }) =>
-      api.post<{ product: Product }>('/products', body).then(r => r.data.product),
+    mutationFn: (
+      body: Omit<CreateProductForm, 'preco' | 'custo'> & { preco: number; custo: number },
+    ) => api.post<{ product: Product }>('/products', body).then((r) => r.data.product),
   })
 
   const deactivateMutation = useMutation({
@@ -145,30 +151,65 @@ export function ProductsPage() {
   })
 
   const stockMutation = useMutation({
-    mutationFn: ({ productId, variantId, quantidade }: { productId: string; variantId: string; quantidade: number }) =>
-      api.patch(`/products/${productId}/variants/${variantId}/stock`, { quantidade }),
+    mutationFn: ({
+      productId,
+      variantId,
+      quantidade,
+    }: {
+      productId: string
+      variantId: string
+      quantidade: number
+    }) => api.patch(`/products/${productId}/variants/${variantId}/stock`, { quantidade }),
   })
 
   const editVariantMutation = useMutation({
-    mutationFn: ({ productId, variantId, data }: { productId: string; variantId: string; data: EditVariantForm }) =>
-      api.put<{ variant: Variant }>(`/products/${productId}/variants/${variantId}`, data).then(r => r.data.variant),
+    mutationFn: ({
+      productId,
+      variantId,
+      data,
+    }: {
+      productId: string
+      variantId: string
+      data: EditVariantForm
+    }) =>
+      api
+        .put<{ variant: Variant }>(`/products/${productId}/variants/${variantId}`, data)
+        .then((r) => r.data.variant),
   })
 
   const updateProductMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { nome: string; sku: string; categoria: string; preco: number; custo: number } }) =>
-      api.put<{ product: Product }>(`/products/${id}`, data).then(r => r.data.product),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string
+      data: { nome: string; sku: string; categoria: string; preco: number; custo: number }
+    }) => api.put<{ product: Product }>(`/products/${id}`, data).then((r) => r.data.product),
   })
 
   const addVariantMutation = useMutation({
     mutationFn: ({ productId, data }: { productId: string; data: NewVariantForm }) =>
-      api.post<{ variant: Variant }>(`/products/${productId}/variants`, data).then(r => r.data.variant),
+      api
+        .post<{ variant: Variant }>(`/products/${productId}/variants`, data)
+        .then((r) => r.data.variant),
   })
 
   // UI state
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [stockEntry, setStockEntry] = useState<{ variantId: string; productId: string; value: string } | null>(null)
-  const [editingVariant, setEditingVariant] = useState<{ variantId: string; productId: string; form: EditVariantForm } | null>(null)
-  const [editingProduct, setEditingProduct] = useState<{ id: string; form: EditProductForm } | null>(null)
+  const [stockEntry, setStockEntry] = useState<{
+    variantId: string
+    productId: string
+    value: string
+  } | null>(null)
+  const [editingVariant, setEditingVariant] = useState<{
+    variantId: string
+    productId: string
+    form: EditVariantForm
+  } | null>(null)
+  const [editingProduct, setEditingProduct] = useState<{
+    id: string
+    form: EditProductForm
+  } | null>(null)
   const [addingVariantTo, setAddingVariantTo] = useState<string | null>(null)
   const [newVariantForm, setNewVariantForm] = useState<NewVariantForm>(NEW_VARIANT_EMPTY)
   const [form, setForm] = useState<CreateProductForm>(FORM_EMPTY)
@@ -179,17 +220,17 @@ export function ProductsPage() {
   const [filterCategoria, setFilterCategoria] = useState('')
   const [filterStatus, setFilterStatus] = useState<'all' | 'ativo' | 'inativo'>('all')
 
-  const categorias = Array.from(new Set(products.map(p => p.categoria))).sort()
+  const categorias = Array.from(new Set(products.map((p) => p.categoria))).sort()
 
-  const filteredProducts = products.filter(p => {
+  const filteredProducts = products.filter((p) => {
     if (filterStatus === 'ativo' && !p.ativo) return false
     if (filterStatus === 'inativo' && p.ativo) return false
     if (filterCategoria && p.categoria !== filterCategoria) return false
     if (filterSearch.trim()) {
       const q = filterSearch.trim().toLowerCase()
       const matchProduct = p.nome.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q)
-      const matchVariant = p.variants.some(v =>
-        v.tamanho.toLowerCase().includes(q) || v.cor.toLowerCase().includes(q)
+      const matchVariant = p.variants.some(
+        (v) => v.tamanho.toLowerCase().includes(q) || v.cor.toLowerCase().includes(q),
       )
       if (!matchProduct && !matchVariant) return false
     }
@@ -229,7 +270,7 @@ export function ProductsPage() {
           queryClient.invalidateQueries({ queryKey: ['products'] })
           setEditingProduct(null)
         },
-      }
+      },
     )
   }
 
@@ -244,17 +285,20 @@ export function ProductsPage() {
           setAddingVariantTo(null)
           setNewVariantForm(NEW_VARIANT_EMPTY)
         },
-      }
+      },
     )
   }
 
   // Variant sub-form helpers
   function addVariantRow() {
-    setForm(f => ({ ...f, variants: [...f.variants, { tamanho: '', cor: '', estoque: 0, estoqueMinimo: 0 }] }))
+    setForm((f) => ({
+      ...f,
+      variants: [...f.variants, { tamanho: '', cor: '', estoque: 0, estoqueMinimo: 0 }],
+    }))
   }
 
   function updateVariantRow(index: number, field: keyof VariantRow, value: string | number) {
-    setForm(f => {
+    setForm((f) => {
       const rows = [...f.variants]
       rows[index] = { ...rows[index], [field]: value }
       return { ...f, variants: rows }
@@ -262,7 +306,7 @@ export function ProductsPage() {
   }
 
   function removeVariantRow(index: number) {
-    setForm(f => ({ ...f, variants: f.variants.filter((_, i) => i !== index) }))
+    setForm((f) => ({ ...f, variants: f.variants.filter((_, i) => i !== index) }))
   }
 
   async function handleCreateProduct(e: FormEvent) {
@@ -277,7 +321,7 @@ export function ProductsPage() {
       ...form,
       preco: parseInt(form.preco || '0') / 100,
       custo: parseInt(form.custo || '0') / 100,
-      variants: form.variants.filter(v => v.tamanho !== '' || v.cor !== ''),
+      variants: form.variants.filter((v) => v.tamanho !== '' || v.cor !== ''),
     }
     createMutation.mutate(body, {
       onSuccess: () => {
@@ -319,7 +363,7 @@ export function ProductsPage() {
           queryClient.invalidateQueries({ queryKey: ['products'] })
           setStockEntry(null)
         },
-      }
+      },
     )
   }
 
@@ -337,34 +381,45 @@ export function ProductsPage() {
           queryClient.invalidateQueries({ queryKey: ['products'] })
           setEditingVariant(null)
         },
-      }
+      },
     )
   }
 
   return (
     <div>
       {/* Header */}
-      <h1 style={{
-        fontFamily: 'var(--font-display)',
-        fontSize: '2rem',
-        letterSpacing: '0.05em',
-        marginBottom: '2rem',
-        color: 'var(--white)',
-      }}>
+      <h1
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: '2rem',
+          letterSpacing: '0.05em',
+          marginBottom: '2rem',
+          color: 'var(--white)',
+        }}
+      >
         PRODUTOS
       </h1>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '2rem', alignItems: 'start' }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 380px',
+          gap: '2rem',
+          alignItems: 'start',
+        }}
+      >
         {/* Product list */}
         <section>
-          <h2 style={{
-            fontFamily: 'var(--font-label)',
-            fontSize: '0.8rem',
-            letterSpacing: '0.15em',
-            textTransform: 'uppercase',
-            color: 'var(--gray)',
-            marginBottom: '1rem',
-          }}>
+          <h2
+            style={{
+              fontFamily: 'var(--font-label)',
+              fontSize: '0.8rem',
+              letterSpacing: '0.15em',
+              textTransform: 'uppercase',
+              color: 'var(--gray)',
+              marginBottom: '1rem',
+            }}
+          >
             Catálogo de produtos
           </h2>
 
@@ -373,21 +428,31 @@ export function ProductsPage() {
             <input
               type="text"
               value={filterSearch}
-              onChange={e => setFilterSearch(e.target.value)}
+              onChange={(e) => {
+                setFilterSearch(e.target.value)
+              }}
               placeholder="Buscar por nome, SKU, tamanho ou cor..."
               style={{ ...inputStyle, flex: '1 1 240px', minWidth: '200px' }}
             />
             <select
               value={filterCategoria}
-              onChange={e => setFilterCategoria(e.target.value)}
+              onChange={(e) => {
+                setFilterCategoria(e.target.value)
+              }}
               style={{ ...inputStyle, flex: '0 0 160px', cursor: 'pointer' }}
             >
               <option value="">Todas categorias</option>
-              {categorias.map(c => <option key={c} value={c}>{c}</option>)}
+              {categorias.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
             </select>
             <select
               value={filterStatus}
-              onChange={e => setFilterStatus(e.target.value as 'all' | 'ativo' | 'inativo')}
+              onChange={(e) => {
+                setFilterStatus(e.target.value as 'all' | 'ativo' | 'inativo')
+              }}
               style={{ ...inputStyle, flex: '0 0 130px', cursor: 'pointer' }}
             >
               <option value="all">Todos</option>
@@ -399,9 +464,13 @@ export function ProductsPage() {
           {isPending ? (
             <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>Carregando...</p>
           ) : products.length === 0 ? (
-            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>Nenhum produto cadastrado.</p>
+            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>
+              Nenhum produto cadastrado.
+            </p>
           ) : filteredProducts.length === 0 ? (
-            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>Nenhum produto corresponde aos filtros.</p>
+            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>
+              Nenhum produto corresponde aos filtros.
+            </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {filteredProducts.map((product) => (
@@ -424,53 +493,96 @@ export function ProductsPage() {
                       padding: '0.875rem 1rem',
                       cursor: 'pointer',
                     }}
-                    onClick={() => setExpandedId(expandedId === product.id ? null : product.id)}
+                    onClick={() => {
+                      setExpandedId(expandedId === product.id ? null : product.id)
+                    }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
                       <div>
-                        <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.9rem', color: 'var(--white)', fontWeight: 500 }}>
+                        <p
+                          style={{
+                            fontFamily: 'var(--font-body)',
+                            fontSize: '0.9rem',
+                            color: 'var(--white)',
+                            fontWeight: 500,
+                          }}
+                        >
                           {product.nome}
                         </p>
-                        <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.75rem', color: 'var(--gray)', marginTop: '0.2rem' }}>
-                          {product.categoria} · {product.variants.length} {product.variants.length === 1 ? 'variante' : 'variantes'}
+                        <p
+                          style={{
+                            fontFamily: 'var(--font-body)',
+                            fontSize: '0.75rem',
+                            color: 'var(--gray)',
+                            marginTop: '0.2rem',
+                          }}
+                        >
+                          {product.categoria} · {product.variants.length}{' '}
+                          {product.variants.length === 1 ? 'variante' : 'variantes'}
                         </p>
                       </div>
-                      <span style={{
-                        fontFamily: 'var(--font-label)',
-                        fontSize: '0.65rem',
-                        letterSpacing: '0.1em',
-                        textTransform: 'uppercase',
-                        color: 'var(--info)',
-                        padding: '0.2rem 0.45rem',
-                        background: 'var(--black3)',
-                        borderRadius: '4px',
-                        flexShrink: 0,
-                      }}>
+                      <span
+                        style={{
+                          fontFamily: 'var(--font-label)',
+                          fontSize: '0.65rem',
+                          letterSpacing: '0.1em',
+                          textTransform: 'uppercase',
+                          color: 'var(--info)',
+                          padding: '0.2rem 0.45rem',
+                          background: 'var(--black3)',
+                          borderRadius: '4px',
+                          flexShrink: 0,
+                        }}
+                      >
                         {product.sku}
                       </span>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        flexShrink: 0,
+                      }}
+                    >
                       <div style={{ textAlign: 'right' }}>
-                        <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.85rem', color: 'var(--white)', fontWeight: 500 }}>
+                        <p
+                          style={{
+                            fontFamily: 'var(--font-body)',
+                            fontSize: '0.85rem',
+                            color: 'var(--white)',
+                            fontWeight: 500,
+                          }}
+                        >
                           R$ {Number(product.preco).toFixed(2)}
                         </p>
-                        <p style={{ fontFamily: 'var(--font-label)', fontSize: '0.65rem', letterSpacing: '0.05em', color: 'var(--gray)', marginTop: '0.1rem' }}>
+                        <p
+                          style={{
+                            fontFamily: 'var(--font-label)',
+                            fontSize: '0.65rem',
+                            letterSpacing: '0.05em',
+                            color: 'var(--gray)',
+                            marginTop: '0.1rem',
+                          }}
+                        >
                           custo R$ {Number(product.custo).toFixed(2)}
                         </p>
                       </div>
 
                       {!product.ativo && (
-                        <span style={{
-                          fontFamily: 'var(--font-label)',
-                          fontSize: '0.65rem',
-                          letterSpacing: '0.1em',
-                          textTransform: 'uppercase',
-                          color: 'var(--danger)',
-                          padding: '0.2rem 0.45rem',
-                          background: 'var(--black3)',
-                          borderRadius: '4px',
-                        }}>
+                        <span
+                          style={{
+                            fontFamily: 'var(--font-label)',
+                            fontSize: '0.65rem',
+                            letterSpacing: '0.1em',
+                            textTransform: 'uppercase',
+                            color: 'var(--danger)',
+                            padding: '0.2rem 0.45rem',
+                            background: 'var(--black3)',
+                            borderRadius: '4px',
+                          }}
+                        >
                           Inativo
                         </span>
                       )}
@@ -502,7 +614,10 @@ export function ProductsPage() {
 
                       {product.ativo ? (
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleDeactivate(product.id) }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeactivate(product.id)
+                          }}
                           disabled={deactivateMutation.isPending}
                           style={{
                             padding: '0.3rem 0.6rem',
@@ -521,7 +636,10 @@ export function ProductsPage() {
                         </button>
                       ) : (
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleActivate(product.id) }}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleActivate(product.id)
+                          }}
                           disabled={activateMutation.isPending}
                           style={{
                             padding: '0.3rem 0.6rem',
@@ -540,7 +658,13 @@ export function ProductsPage() {
                         </button>
                       )}
 
-                      <span style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.8rem' }}>
+                      <span
+                        style={{
+                          color: 'var(--gray)',
+                          fontFamily: 'var(--font-body)',
+                          fontSize: '0.8rem',
+                        }}
+                      >
                         {expandedId === product.id ? '▲' : '▼'}
                       </span>
                     </div>
@@ -548,21 +672,31 @@ export function ProductsPage() {
 
                   {/* Inline product edit form */}
                   {editingProduct?.id === product.id && (
-                    <form onSubmit={handleUpdateProduct} style={{
-                      borderTop: '1px solid var(--black4)',
-                      padding: '0.875rem 1rem',
-                      background: 'var(--black3)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.75rem',
-                    }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.625rem' }}>
+                    <form
+                      onSubmit={handleUpdateProduct}
+                      style={{
+                        borderTop: '1px solid var(--black4)',
+                        padding: '0.875rem 1rem',
+                        background: 'var(--black3)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.75rem',
+                      }}
+                    >
+                      <div
+                        style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.625rem' }}
+                      >
                         <div>
                           <label style={{ ...labelStyle, fontSize: '0.65rem' }}>Nome</label>
                           <input
                             type="text"
                             value={editingProduct.form.nome}
-                            onChange={e => setEditingProduct({ ...editingProduct, form: { ...editingProduct.form, nome: e.target.value } })}
+                            onChange={(e) => {
+                              setEditingProduct({
+                                ...editingProduct,
+                                form: { ...editingProduct.form, nome: e.target.value },
+                              })
+                            }}
                             style={inputStyle}
                             required
                           />
@@ -572,7 +706,12 @@ export function ProductsPage() {
                           <input
                             type="text"
                             value={editingProduct.form.sku}
-                            onChange={e => setEditingProduct({ ...editingProduct, form: { ...editingProduct.form, sku: e.target.value.toUpperCase() } })}
+                            onChange={(e) => {
+                              setEditingProduct({
+                                ...editingProduct,
+                                form: { ...editingProduct.form, sku: e.target.value.toUpperCase() },
+                              })
+                            }}
                             style={inputStyle}
                             required
                           />
@@ -582,21 +721,31 @@ export function ProductsPage() {
                           <input
                             type="text"
                             value={editingProduct.form.categoria}
-                            onChange={e => setEditingProduct({ ...editingProduct, form: { ...editingProduct.form, categoria: e.target.value } })}
+                            onChange={(e) => {
+                              setEditingProduct({
+                                ...editingProduct,
+                                form: { ...editingProduct.form, categoria: e.target.value },
+                              })
+                            }}
                             style={inputStyle}
                             required
                           />
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                        <div
+                          style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}
+                        >
                           <div>
                             <label style={{ ...labelStyle, fontSize: '0.65rem' }}>Preço (R$)</label>
                             <input
                               type="text"
                               inputMode="numeric"
                               value={formatMoneyDisplay(editingProduct.form.preco)}
-                              onChange={e => {
+                              onChange={(e) => {
                                 const digits = e.target.value.replace(/\D/g, '')
-                                setEditingProduct({ ...editingProduct, form: { ...editingProduct.form, preco: digits } })
+                                setEditingProduct({
+                                  ...editingProduct,
+                                  form: { ...editingProduct.form, preco: digits },
+                                })
                               }}
                               style={inputStyle}
                             />
@@ -607,9 +756,12 @@ export function ProductsPage() {
                               type="text"
                               inputMode="numeric"
                               value={formatMoneyDisplay(editingProduct.form.custo)}
-                              onChange={e => {
+                              onChange={(e) => {
                                 const digits = e.target.value.replace(/\D/g, '')
-                                setEditingProduct({ ...editingProduct, form: { ...editingProduct.form, custo: digits } })
+                                setEditingProduct({
+                                  ...editingProduct,
+                                  form: { ...editingProduct.form, custo: digits },
+                                })
                               }}
                               style={inputStyle}
                             />
@@ -622,7 +774,9 @@ export function ProductsPage() {
                           disabled={updateProductMutation.isPending}
                           style={{
                             padding: '0.5rem 1.25rem',
-                            background: updateProductMutation.isPending ? 'var(--gray2)' : 'var(--white)',
+                            background: updateProductMutation.isPending
+                              ? 'var(--gray2)'
+                              : 'var(--white)',
                             color: 'var(--black)',
                             fontFamily: 'var(--font-label)',
                             fontSize: '0.7rem',
@@ -638,7 +792,9 @@ export function ProductsPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => setEditingProduct(null)}
+                          onClick={() => {
+                            setEditingProduct(null)
+                          }}
                           style={{
                             padding: '0.5rem 1rem',
                             background: 'transparent',
@@ -658,19 +814,30 @@ export function ProductsPage() {
 
                   {/* Expanded variant rows */}
                   {expandedId === product.id && (
-                    <div style={{
-                      borderTop: '1px solid var(--black4)',
-                      padding: '0.75rem 1rem',
-                      background: 'var(--black)',
-                    }}>
+                    <div
+                      style={{
+                        borderTop: '1px solid var(--black4)',
+                        padding: '0.75rem 1rem',
+                        background: 'var(--black)',
+                      }}
+                    >
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         {product.variants.length === 0 && (
-                          <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.8rem' }}>Sem variantes.</p>
+                          <p
+                            style={{
+                              color: 'var(--gray)',
+                              fontFamily: 'var(--font-body)',
+                              fontSize: '0.8rem',
+                            }}
+                          >
+                            Sem variantes.
+                          </p>
                         )}
                         {product.variants.map((variant) => (
-                            <div key={variant.id}>
-                              {/* Variant row */}
-                              <div style={{
+                          <div key={variant.id}>
+                            {/* Variant row */}
+                            <div
+                              style={{
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
@@ -679,241 +846,288 @@ export function ProductsPage() {
                                 borderRadius: 'var(--radius)',
                                 border: '1px solid var(--black4)',
                                 opacity: variant.ativo ? 1 : 0.5,
-                              }}>
-                                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                                  <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.8rem', color: 'var(--white)' }}>
-                                    {variant.tamanho || '—'} / {variant.cor || '—'}
-                                  </span>
-                                  <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.7rem', color: 'var(--gray)', letterSpacing: '0.05em' }}>
-                                    Estoque: {variant.estoque} / mín {variant.estoqueMinimo}
-                                  </span>
-                                </div>
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                  <button
-                                    onClick={() => {
-                                      if (stockEntry?.variantId === variant.id) {
-                                        setStockEntry(null)
-                                      } else {
-                                        setEditingVariant(null)
-                                        setStockEntry({ variantId: variant.id, productId: product.id, value: '' })
-                                      }
-                                    }}
-                                    style={{
-                                      padding: '0.25rem 0.5rem',
-                                      background: 'transparent',
-                                      border: '1px solid var(--black4)',
-                                      borderRadius: 'var(--radius)',
-                                      color: 'var(--gray)',
-                                      fontFamily: 'var(--font-label)',
-                                      fontSize: '0.65rem',
-                                      letterSpacing: '0.08em',
-                                      textTransform: 'uppercase',
-                                      cursor: 'pointer',
-                                    }}
-                                  >
-                                    Estoque +
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      if (editingVariant?.variantId === variant.id) {
-                                        setEditingVariant(null)
-                                      } else {
-                                        setStockEntry(null)
-                                        setEditingVariant({
-                                          variantId: variant.id,
-                                          productId: product.id,
-                                          form: {
-                                            tamanho: variant.tamanho,
-                                            cor: variant.cor,
-                                            estoqueMinimo: variant.estoqueMinimo,
-                                          },
-                                        })
-                                      }
-                                    }}
-                                    style={{
-                                      padding: '0.25rem 0.5rem',
-                                      background: 'transparent',
-                                      border: '1px solid var(--black4)',
-                                      borderRadius: 'var(--radius)',
-                                      color: 'var(--gray)',
-                                      fontFamily: 'var(--font-label)',
-                                      fontSize: '0.65rem',
-                                      letterSpacing: '0.08em',
-                                      textTransform: 'uppercase',
-                                      cursor: 'pointer',
-                                    }}
-                                  >
-                                    Editar
-                                  </button>
-                                </div>
+                              }}
+                            >
+                              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                                <span
+                                  style={{
+                                    fontFamily: 'var(--font-body)',
+                                    fontSize: '0.8rem',
+                                    color: 'var(--white)',
+                                  }}
+                                >
+                                  {variant.tamanho || '—'} / {variant.cor || '—'}
+                                </span>
+                                <span
+                                  style={{
+                                    fontFamily: 'var(--font-label)',
+                                    fontSize: '0.7rem',
+                                    color: 'var(--gray)',
+                                    letterSpacing: '0.05em',
+                                  }}
+                                >
+                                  Estoque: {variant.estoque} / mín {variant.estoqueMinimo}
+                                </span>
                               </div>
-
-                              {/* Inline stock entry */}
-                              {stockEntry?.variantId === variant.id && (
-                                <form
-                                  onSubmit={handleStockSubmit}
+                              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button
+                                  onClick={() => {
+                                    if (stockEntry?.variantId === variant.id) {
+                                      setStockEntry(null)
+                                    } else {
+                                      setEditingVariant(null)
+                                      setStockEntry({
+                                        variantId: variant.id,
+                                        productId: product.id,
+                                        value: '',
+                                      })
+                                    }
+                                  }}
                                   style={{
-                                    display: 'flex',
-                                    gap: '0.5rem',
-                                    alignItems: 'center',
-                                    padding: '0.5rem 0.75rem',
-                                    background: 'var(--black3)',
-                                    borderRadius: 'var(--radius)',
+                                    padding: '0.25rem 0.5rem',
+                                    background: 'transparent',
                                     border: '1px solid var(--black4)',
-                                    marginTop: '0.25rem',
+                                    borderRadius: 'var(--radius)',
+                                    color: 'var(--gray)',
+                                    fontFamily: 'var(--font-label)',
+                                    fontSize: '0.65rem',
+                                    letterSpacing: '0.08em',
+                                    textTransform: 'uppercase',
+                                    cursor: 'pointer',
                                   }}
                                 >
-                                  <label style={{ ...labelStyle, marginBottom: 0, whiteSpace: 'nowrap' }}>Qtd a adicionar</label>
+                                  Estoque +
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    if (editingVariant?.variantId === variant.id) {
+                                      setEditingVariant(null)
+                                    } else {
+                                      setStockEntry(null)
+                                      setEditingVariant({
+                                        variantId: variant.id,
+                                        productId: product.id,
+                                        form: {
+                                          tamanho: variant.tamanho,
+                                          cor: variant.cor,
+                                          estoqueMinimo: variant.estoqueMinimo,
+                                        },
+                                      })
+                                    }
+                                  }}
+                                  style={{
+                                    padding: '0.25rem 0.5rem',
+                                    background: 'transparent',
+                                    border: '1px solid var(--black4)',
+                                    borderRadius: 'var(--radius)',
+                                    color: 'var(--gray)',
+                                    fontFamily: 'var(--font-label)',
+                                    fontSize: '0.65rem',
+                                    letterSpacing: '0.08em',
+                                    textTransform: 'uppercase',
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  Editar
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Inline stock entry */}
+                            {stockEntry?.variantId === variant.id && (
+                              <form
+                                onSubmit={handleStockSubmit}
+                                style={{
+                                  display: 'flex',
+                                  gap: '0.5rem',
+                                  alignItems: 'center',
+                                  padding: '0.5rem 0.75rem',
+                                  background: 'var(--black3)',
+                                  borderRadius: 'var(--radius)',
+                                  border: '1px solid var(--black4)',
+                                  marginTop: '0.25rem',
+                                }}
+                              >
+                                <label
+                                  style={{ ...labelStyle, marginBottom: 0, whiteSpace: 'nowrap' }}
+                                >
+                                  Qtd a adicionar
+                                </label>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  value={stockEntry.value}
+                                  onChange={(e) => {
+                                    setStockEntry({ ...stockEntry, value: e.target.value })
+                                  }}
+                                  required
+                                  style={{ ...smallInputStyle, width: '100px' }}
+                                  autoFocus
+                                />
+                                <button
+                                  type="submit"
+                                  disabled={stockMutation.isPending}
+                                  style={{
+                                    padding: '0.375rem 0.75rem',
+                                    background: 'var(--white)',
+                                    color: 'var(--black)',
+                                    fontFamily: 'var(--font-label)',
+                                    fontSize: '0.65rem',
+                                    letterSpacing: '0.1em',
+                                    textTransform: 'uppercase',
+                                    border: 'none',
+                                    borderRadius: 'var(--radius)',
+                                    cursor: 'pointer',
+                                    fontWeight: 600,
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  {stockMutation.isPending ? '...' : 'Confirmar'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setStockEntry(null)
+                                  }}
+                                  style={{
+                                    padding: '0.375rem 0.5rem',
+                                    background: 'transparent',
+                                    border: '1px solid var(--black4)',
+                                    borderRadius: 'var(--radius)',
+                                    color: 'var(--gray)',
+                                    fontFamily: 'var(--font-label)',
+                                    fontSize: '0.65rem',
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  ×
+                                </button>
+                              </form>
+                            )}
+
+                            {/* Inline variant edit */}
+                            {editingVariant?.variantId === variant.id && (
+                              <form
+                                onSubmit={handleEditVariantSubmit}
+                                style={{
+                                  display: 'flex',
+                                  gap: '0.5rem',
+                                  alignItems: 'flex-end',
+                                  flexWrap: 'wrap',
+                                  padding: '0.5rem 0.75rem',
+                                  background: 'var(--black3)',
+                                  borderRadius: 'var(--radius)',
+                                  border: '1px solid var(--black4)',
+                                  marginTop: '0.25rem',
+                                }}
+                              >
+                                <div>
+                                  <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>
+                                    Tamanho
+                                  </label>
                                   <input
-                                    type="number"
-                                    min={1}
-                                    value={stockEntry.value}
-                                    onChange={(e) => setStockEntry({ ...stockEntry, value: e.target.value })}
-                                    required
-                                    style={{ ...smallInputStyle, width: '100px' }}
-                                    autoFocus
-                                  />
-                                  <button
-                                    type="submit"
-                                    disabled={stockMutation.isPending}
-                                    style={{
-                                      padding: '0.375rem 0.75rem',
-                                      background: 'var(--white)',
-                                      color: 'var(--black)',
-                                      fontFamily: 'var(--font-label)',
-                                      fontSize: '0.65rem',
-                                      letterSpacing: '0.1em',
-                                      textTransform: 'uppercase',
-                                      border: 'none',
-                                      borderRadius: 'var(--radius)',
-                                      cursor: 'pointer',
-                                      fontWeight: 600,
-                                      whiteSpace: 'nowrap',
-                                    }}
-                                  >
-                                    {stockMutation.isPending ? '...' : 'Confirmar'}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => setStockEntry(null)}
-                                    style={{
-                                      padding: '0.375rem 0.5rem',
-                                      background: 'transparent',
-                                      border: '1px solid var(--black4)',
-                                      borderRadius: 'var(--radius)',
-                                      color: 'var(--gray)',
-                                      fontFamily: 'var(--font-label)',
-                                      fontSize: '0.65rem',
-                                      cursor: 'pointer',
-                                    }}
-                                  >
-                                    ×
-                                  </button>
-                                </form>
-                              )}
-
-                              {/* Inline variant edit */}
-                              {editingVariant?.variantId === variant.id && (
-                                <form
-                                  onSubmit={handleEditVariantSubmit}
-                                  style={{
-                                    display: 'flex',
-                                    gap: '0.5rem',
-                                    alignItems: 'flex-end',
-                                    flexWrap: 'wrap',
-                                    padding: '0.5rem 0.75rem',
-                                    background: 'var(--black3)',
-                                    borderRadius: 'var(--radius)',
-                                    border: '1px solid var(--black4)',
-                                    marginTop: '0.25rem',
-                                  }}
-                                >
-                                  <div>
-                                    <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>Tamanho</label>
-                                    <input
-                                      type="text"
-                                      value={editingVariant.form.tamanho}
-                                      onChange={(e) => setEditingVariant({
+                                    type="text"
+                                    value={editingVariant.form.tamanho}
+                                    onChange={(e) => {
+                                      setEditingVariant({
                                         ...editingVariant,
                                         form: { ...editingVariant.form, tamanho: e.target.value },
-                                      })}
-                                      style={{ ...smallInputStyle, width: '80px' }}
-                                      autoFocus
-                                    />
-                                  </div>
-                                  <div>
-                                    <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>Cor</label>
-                                    <input
-                                      type="text"
-                                      value={editingVariant.form.cor}
-                                      onChange={(e) => setEditingVariant({
+                                      })
+                                    }}
+                                    style={{ ...smallInputStyle, width: '80px' }}
+                                    autoFocus
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>
+                                    Cor
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editingVariant.form.cor}
+                                    onChange={(e) => {
+                                      setEditingVariant({
                                         ...editingVariant,
                                         form: { ...editingVariant.form, cor: e.target.value },
-                                      })}
-                                      style={{ ...smallInputStyle, width: '100px' }}
-                                    />
-                                  </div>
-                                  <div>
-                                    <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>Estoque mín.</label>
-                                    <input
-                                      type="number"
-                                      min={0}
-                                      value={editingVariant.form.estoqueMinimo}
-                                      onChange={(e) => setEditingVariant({
+                                      })
+                                    }}
+                                    style={{ ...smallInputStyle, width: '100px' }}
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>
+                                    Estoque mín.
+                                  </label>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={editingVariant.form.estoqueMinimo}
+                                    onChange={(e) => {
+                                      setEditingVariant({
                                         ...editingVariant,
-                                        form: { ...editingVariant.form, estoqueMinimo: e.target.value === '' ? '' : Number(e.target.value) },
-                                      })}
-                                      style={{ ...smallInputStyle, width: '80px' }}
-                                    />
-                                  </div>
-                                  <button
-                                    type="submit"
-                                    disabled={editVariantMutation.isPending}
-                                    style={{
-                                      padding: '0.375rem 0.75rem',
-                                      background: 'var(--white)',
-                                      color: 'var(--black)',
-                                      fontFamily: 'var(--font-label)',
-                                      fontSize: '0.65rem',
-                                      letterSpacing: '0.1em',
-                                      textTransform: 'uppercase',
-                                      border: 'none',
-                                      borderRadius: 'var(--radius)',
-                                      cursor: 'pointer',
-                                      fontWeight: 600,
-                                      whiteSpace: 'nowrap',
-                                      alignSelf: 'flex-end',
+                                        form: {
+                                          ...editingVariant.form,
+                                          estoqueMinimo:
+                                            e.target.value === '' ? '' : Number(e.target.value),
+                                        },
+                                      })
                                     }}
-                                  >
-                                    {editVariantMutation.isPending ? '...' : 'Salvar'}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => setEditingVariant(null)}
-                                    style={{
-                                      padding: '0.375rem 0.5rem',
-                                      background: 'transparent',
-                                      border: '1px solid var(--black4)',
-                                      borderRadius: 'var(--radius)',
-                                      color: 'var(--gray)',
-                                      fontFamily: 'var(--font-label)',
-                                      fontSize: '0.65rem',
-                                      cursor: 'pointer',
-                                      alignSelf: 'flex-end',
-                                    }}
-                                  >
-                                    ×
-                                  </button>
-                                </form>
-                              )}
-                            </div>
-                          ))}
+                                    style={{ ...smallInputStyle, width: '80px' }}
+                                  />
+                                </div>
+                                <button
+                                  type="submit"
+                                  disabled={editVariantMutation.isPending}
+                                  style={{
+                                    padding: '0.375rem 0.75rem',
+                                    background: 'var(--white)',
+                                    color: 'var(--black)',
+                                    fontFamily: 'var(--font-label)',
+                                    fontSize: '0.65rem',
+                                    letterSpacing: '0.1em',
+                                    textTransform: 'uppercase',
+                                    border: 'none',
+                                    borderRadius: 'var(--radius)',
+                                    cursor: 'pointer',
+                                    fontWeight: 600,
+                                    whiteSpace: 'nowrap',
+                                    alignSelf: 'flex-end',
+                                  }}
+                                >
+                                  {editVariantMutation.isPending ? '...' : 'Salvar'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingVariant(null)
+                                  }}
+                                  style={{
+                                    padding: '0.375rem 0.5rem',
+                                    background: 'transparent',
+                                    border: '1px solid var(--black4)',
+                                    borderRadius: 'var(--radius)',
+                                    color: 'var(--gray)',
+                                    fontFamily: 'var(--font-label)',
+                                    fontSize: '0.65rem',
+                                    cursor: 'pointer',
+                                    alignSelf: 'flex-end',
+                                  }}
+                                >
+                                  ×
+                                </button>
+                              </form>
+                            )}
+                          </div>
+                        ))}
 
                         {/* Add variant button + inline form */}
                         <div>
                           {addingVariantTo !== product.id ? (
                             <button
-                              onClick={() => { setAddingVariantTo(product.id); setNewVariantForm(NEW_VARIANT_EMPTY) }}
+                              onClick={() => {
+                                setAddingVariantTo(product.id)
+                                setNewVariantForm(NEW_VARIANT_EMPTY)
+                              }}
                               style={{
                                 padding: '0.3rem 0.75rem',
                                 background: 'transparent',
@@ -932,7 +1146,9 @@ export function ProductsPage() {
                             </button>
                           ) : (
                             <form
-                              onSubmit={(e) => handleAddVariantSubmit(e, product.id)}
+                              onSubmit={(e) => {
+                                handleAddVariantSubmit(e, product.id)
+                              }}
                               style={{
                                 display: 'flex',
                                 gap: '0.5rem',
@@ -946,46 +1162,69 @@ export function ProductsPage() {
                               }}
                             >
                               <div>
-                                <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>Tamanho *</label>
+                                <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>
+                                  Tamanho *
+                                </label>
                                 <input
                                   type="text"
                                   required
                                   value={newVariantForm.tamanho}
-                                  onChange={e => setNewVariantForm(f => ({ ...f, tamanho: e.target.value }))}
+                                  onChange={(e) => {
+                                    setNewVariantForm((f) => ({ ...f, tamanho: e.target.value }))
+                                  }}
                                   style={{ ...smallInputStyle, width: '80px' }}
                                   autoFocus
                                   placeholder="M"
                                 />
                               </div>
                               <div>
-                                <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>Cor *</label>
+                                <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>
+                                  Cor *
+                                </label>
                                 <input
                                   type="text"
                                   required
                                   value={newVariantForm.cor}
-                                  onChange={e => setNewVariantForm(f => ({ ...f, cor: e.target.value }))}
+                                  onChange={(e) => {
+                                    setNewVariantForm((f) => ({ ...f, cor: e.target.value }))
+                                  }}
                                   style={{ ...smallInputStyle, width: '100px' }}
                                   placeholder="Azul"
                                 />
                               </div>
                               <div>
-                                <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>Estq. inicial</label>
+                                <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>
+                                  Estq. inicial
+                                </label>
                                 <input
                                   type="number"
                                   min={0}
                                   value={newVariantForm.estoque}
-                                  onChange={e => setNewVariantForm(f => ({ ...f, estoque: e.target.value === '' ? '' : Number(e.target.value) }))}
+                                  onChange={(e) => {
+                                    setNewVariantForm((f) => ({
+                                      ...f,
+                                      estoque: e.target.value === '' ? '' : Number(e.target.value),
+                                    }))
+                                  }}
                                   style={{ ...smallInputStyle, width: '70px' }}
                                   placeholder="0"
                                 />
                               </div>
                               <div>
-                                <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>Mín.</label>
+                                <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>
+                                  Mín.
+                                </label>
                                 <input
                                   type="number"
                                   min={0}
                                   value={newVariantForm.estoqueMinimo}
-                                  onChange={e => setNewVariantForm(f => ({ ...f, estoqueMinimo: e.target.value === '' ? '' : Number(e.target.value) }))}
+                                  onChange={(e) => {
+                                    setNewVariantForm((f) => ({
+                                      ...f,
+                                      estoqueMinimo:
+                                        e.target.value === '' ? '' : Number(e.target.value),
+                                    }))
+                                  }}
                                   style={{ ...smallInputStyle, width: '60px' }}
                                   placeholder="0"
                                 />
@@ -1013,7 +1252,9 @@ export function ProductsPage() {
                               </button>
                               <button
                                 type="button"
-                                onClick={() => setAddingVariantTo(null)}
+                                onClick={() => {
+                                  setAddingVariantTo(null)
+                                }}
                                 style={{
                                   padding: '0.375rem 0.5rem',
                                   background: 'transparent',
@@ -1041,56 +1282,111 @@ export function ProductsPage() {
         </section>
 
         {/* Create product form */}
-        <section style={{
-          background: 'var(--black2)',
-          border: '1px solid var(--black4)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '1.5rem',
-        }}>
-          <h2 style={{
-            fontFamily: 'var(--font-label)',
-            fontSize: '0.8rem',
-            letterSpacing: '0.15em',
-            textTransform: 'uppercase',
-            color: 'var(--gray)',
-            marginBottom: '1.25rem',
-          }}>
+        <section
+          style={{
+            background: 'var(--black2)',
+            border: '1px solid var(--black4)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '1.5rem',
+          }}
+        >
+          <h2
+            style={{
+              fontFamily: 'var(--font-label)',
+              fontSize: '0.8rem',
+              letterSpacing: '0.15em',
+              textTransform: 'uppercase',
+              color: 'var(--gray)',
+              marginBottom: '1.25rem',
+            }}
+          >
             Novo produto
           </h2>
 
-          <form onSubmit={handleCreateProduct} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <form
+            onSubmit={handleCreateProduct}
+            style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+          >
             <div>
               <label style={labelStyle}>Nome</label>
               <input
                 type="text"
                 value={form.nome}
-                onChange={(e) => { setForm({ ...form, nome: e.target.value }); setFormErrors(fe => ({ ...fe, nome: undefined })) }}
-                style={{ ...inputStyle, borderColor: formErrors.nome ? 'var(--danger)' : undefined }}
+                onChange={(e) => {
+                  setForm({ ...form, nome: e.target.value })
+                  setFormErrors((fe) => ({ ...fe, nome: undefined }))
+                }}
+                style={{
+                  ...inputStyle,
+                  borderColor: formErrors.nome ? 'var(--danger)' : undefined,
+                }}
                 placeholder="Nome do produto"
               />
-              {formErrors.nome && <p style={{ color: 'var(--danger)', fontSize: '0.75rem', fontFamily: 'var(--font-body)', marginTop: '0.25rem' }}>{formErrors.nome}</p>}
+              {formErrors.nome && (
+                <p
+                  style={{
+                    color: 'var(--danger)',
+                    fontSize: '0.75rem',
+                    fontFamily: 'var(--font-body)',
+                    marginTop: '0.25rem',
+                  }}
+                >
+                  {formErrors.nome}
+                </p>
+              )}
             </div>
             <div>
               <label style={labelStyle}>SKU</label>
               <input
                 type="text"
                 value={form.sku}
-                onChange={(e) => { setForm({ ...form, sku: e.target.value.toUpperCase() }); setFormErrors(fe => ({ ...fe, sku: undefined })) }}
+                onChange={(e) => {
+                  setForm({ ...form, sku: e.target.value.toUpperCase() })
+                  setFormErrors((fe) => ({ ...fe, sku: undefined }))
+                }}
                 style={{ ...inputStyle, borderColor: formErrors.sku ? 'var(--danger)' : undefined }}
                 placeholder="CAM-001"
               />
-              {formErrors.sku && <p style={{ color: 'var(--danger)', fontSize: '0.75rem', fontFamily: 'var(--font-body)', marginTop: '0.25rem' }}>{formErrors.sku}</p>}
+              {formErrors.sku && (
+                <p
+                  style={{
+                    color: 'var(--danger)',
+                    fontSize: '0.75rem',
+                    fontFamily: 'var(--font-body)',
+                    marginTop: '0.25rem',
+                  }}
+                >
+                  {formErrors.sku}
+                </p>
+              )}
             </div>
             <div>
               <label style={labelStyle}>Categoria</label>
               <input
                 type="text"
                 value={form.categoria}
-                onChange={(e) => { setForm({ ...form, categoria: e.target.value }); setFormErrors(fe => ({ ...fe, categoria: undefined })) }}
-                style={{ ...inputStyle, borderColor: formErrors.categoria ? 'var(--danger)' : undefined }}
+                onChange={(e) => {
+                  setForm({ ...form, categoria: e.target.value })
+                  setFormErrors((fe) => ({ ...fe, categoria: undefined }))
+                }}
+                style={{
+                  ...inputStyle,
+                  borderColor: formErrors.categoria ? 'var(--danger)' : undefined,
+                }}
                 placeholder="Roupas"
               />
-              {formErrors.categoria && <p style={{ color: 'var(--danger)', fontSize: '0.75rem', fontFamily: 'var(--font-body)', marginTop: '0.25rem' }}>{formErrors.categoria}</p>}
+              {formErrors.categoria && (
+                <p
+                  style={{
+                    color: 'var(--danger)',
+                    fontSize: '0.75rem',
+                    fontFamily: 'var(--font-body)',
+                    marginTop: '0.25rem',
+                  }}
+                >
+                  {formErrors.categoria}
+                </p>
+              )}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <div>
@@ -1101,13 +1397,27 @@ export function ProductsPage() {
                   value={formatMoneyDisplay(form.preco)}
                   onChange={(e) => {
                     const digits = e.target.value.replace(/\D/g, '')
-                    setForm(f => ({ ...f, preco: digits }))
-                    setFormErrors(fe => ({ ...fe, preco: undefined }))
+                    setForm((f) => ({ ...f, preco: digits }))
+                    setFormErrors((fe) => ({ ...fe, preco: undefined }))
                   }}
-                  style={{ ...inputStyle, borderColor: formErrors.preco ? 'var(--danger)' : undefined }}
+                  style={{
+                    ...inputStyle,
+                    borderColor: formErrors.preco ? 'var(--danger)' : undefined,
+                  }}
                   placeholder="0,00"
                 />
-                {formErrors.preco && <p style={{ color: 'var(--danger)', fontSize: '0.75rem', fontFamily: 'var(--font-body)', marginTop: '0.25rem' }}>{formErrors.preco}</p>}
+                {formErrors.preco && (
+                  <p
+                    style={{
+                      color: 'var(--danger)',
+                      fontSize: '0.75rem',
+                      fontFamily: 'var(--font-body)',
+                      marginTop: '0.25rem',
+                    }}
+                  >
+                    {formErrors.preco}
+                  </p>
+                )}
               </div>
               <div>
                 <label style={labelStyle}>Custo (R$)</label>
@@ -1117,19 +1427,40 @@ export function ProductsPage() {
                   value={formatMoneyDisplay(form.custo)}
                   onChange={(e) => {
                     const digits = e.target.value.replace(/\D/g, '')
-                    setForm(f => ({ ...f, custo: digits }))
-                    setFormErrors(fe => ({ ...fe, custo: undefined }))
+                    setForm((f) => ({ ...f, custo: digits }))
+                    setFormErrors((fe) => ({ ...fe, custo: undefined }))
                   }}
-                  style={{ ...inputStyle, borderColor: formErrors.custo ? 'var(--danger)' : undefined }}
+                  style={{
+                    ...inputStyle,
+                    borderColor: formErrors.custo ? 'var(--danger)' : undefined,
+                  }}
                   placeholder="0,00"
                 />
-                {formErrors.custo && <p style={{ color: 'var(--danger)', fontSize: '0.75rem', fontFamily: 'var(--font-body)', marginTop: '0.25rem' }}>{formErrors.custo}</p>}
+                {formErrors.custo && (
+                  <p
+                    style={{
+                      color: 'var(--danger)',
+                      fontSize: '0.75rem',
+                      fontFamily: 'var(--font-body)',
+                      marginTop: '0.25rem',
+                    }}
+                  >
+                    {formErrors.custo}
+                  </p>
+                )}
               </div>
             </div>
 
             {/* Variant sub-form */}
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '0.5rem',
+                }}
+              >
                 <label style={{ ...labelStyle, marginBottom: 0 }}>Variantes</label>
                 <button
                   type="button"
@@ -1155,83 +1486,127 @@ export function ProductsPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {form.variants.map((row, idx) => (
                     <div key={idx}>
-                    <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 1fr 60px 60px auto',
-                        gap: '0.375rem',
-                        alignItems: 'end',
-                        padding: '0.5rem',
-                        background: 'var(--black3)',
-                        borderRadius: 'var(--radius)',
-                        border: `1px solid ${formErrors.variants?.[idx] ? 'var(--danger)' : 'var(--black4)'}`,
-                      }}
-                    >
-                      <div>
-                        <label style={{ ...labelStyle, fontSize: '0.65rem', marginBottom: '0.2rem' }}>Tamanho</label>
-                        <input
-                          type="text"
-                          value={row.tamanho}
-                          onChange={(e) => { updateVariantRow(idx, 'tamanho', e.target.value); setFormErrors(fe => { const v = { ...fe.variants }; delete v[idx]; return { ...fe, variants: v } }) }}
-                          style={smallInputStyle}
-                          placeholder="M"
-                        />
-                      </div>
-                      <div>
-                        <label style={{ ...labelStyle, fontSize: '0.65rem', marginBottom: '0.2rem' }}>Cor</label>
-                        <input
-                          type="text"
-                          value={row.cor}
-                          onChange={(e) => { updateVariantRow(idx, 'cor', e.target.value); setFormErrors(fe => { const v = { ...fe.variants }; delete v[idx]; return { ...fe, variants: v } }) }}
-                          style={smallInputStyle}
-                          placeholder="Azul"
-                        />
-                      </div>
-                      <div>
-                        <label style={{ ...labelStyle, fontSize: '0.65rem', marginBottom: '0.2rem' }}>Estq.</label>
-                        <input
-                          type="number"
-                          min={0}
-                          value={row.estoque}
-                          onChange={(e) => updateVariantRow(idx, 'estoque', Number(e.target.value))}
-                          style={smallInputStyle}
-                          placeholder="0"
-                        />
-                      </div>
-                      <div>
-                        <label style={{ ...labelStyle, fontSize: '0.65rem', marginBottom: '0.2rem' }}>Mín.</label>
-                        <input
-                          type="number"
-                          min={0}
-                          value={row.estoqueMinimo}
-                          onChange={(e) => updateVariantRow(idx, 'estoqueMinimo', Number(e.target.value))}
-                          style={smallInputStyle}
-                          placeholder="0"
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeVariantRow(idx)}
+                      <div
                         style={{
-                          padding: '0.375rem 0.5rem',
-                          background: 'transparent',
-                          border: '1px solid var(--black4)',
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1fr 60px 60px auto',
+                          gap: '0.375rem',
+                          alignItems: 'end',
+                          padding: '0.5rem',
+                          background: 'var(--black3)',
                           borderRadius: 'var(--radius)',
-                          color: 'var(--danger)',
-                          fontFamily: 'var(--font-label)',
-                          fontSize: '0.75rem',
-                          cursor: 'pointer',
-                          alignSelf: 'flex-end',
+                          border: `1px solid ${formErrors.variants?.[idx] ? 'var(--danger)' : 'var(--black4)'}`,
                         }}
                       >
-                        ×
-                      </button>
-                    </div>
-                    {formErrors.variants?.[idx] && (
-                      <p style={{ color: 'var(--danger)', fontSize: '0.72rem', fontFamily: 'var(--font-body)', marginTop: '0.2rem', paddingLeft: '0.25rem' }}>
-                        {formErrors.variants[idx]}
-                      </p>
-                    )}
+                        <div>
+                          <label
+                            style={{ ...labelStyle, fontSize: '0.65rem', marginBottom: '0.2rem' }}
+                          >
+                            Tamanho
+                          </label>
+                          <input
+                            type="text"
+                            value={row.tamanho}
+                            onChange={(e) => {
+                              updateVariantRow(idx, 'tamanho', e.target.value)
+                              setFormErrors((fe) => {
+                                const v = { ...fe.variants }
+                                delete v[idx]
+                                return { ...fe, variants: v }
+                              })
+                            }}
+                            style={smallInputStyle}
+                            placeholder="M"
+                          />
+                        </div>
+                        <div>
+                          <label
+                            style={{ ...labelStyle, fontSize: '0.65rem', marginBottom: '0.2rem' }}
+                          >
+                            Cor
+                          </label>
+                          <input
+                            type="text"
+                            value={row.cor}
+                            onChange={(e) => {
+                              updateVariantRow(idx, 'cor', e.target.value)
+                              setFormErrors((fe) => {
+                                const v = { ...fe.variants }
+                                delete v[idx]
+                                return { ...fe, variants: v }
+                              })
+                            }}
+                            style={smallInputStyle}
+                            placeholder="Azul"
+                          />
+                        </div>
+                        <div>
+                          <label
+                            style={{ ...labelStyle, fontSize: '0.65rem', marginBottom: '0.2rem' }}
+                          >
+                            Estq.
+                          </label>
+                          <input
+                            type="number"
+                            min={0}
+                            value={row.estoque}
+                            onChange={(e) => {
+                              updateVariantRow(idx, 'estoque', Number(e.target.value))
+                            }}
+                            style={smallInputStyle}
+                            placeholder="0"
+                          />
+                        </div>
+                        <div>
+                          <label
+                            style={{ ...labelStyle, fontSize: '0.65rem', marginBottom: '0.2rem' }}
+                          >
+                            Mín.
+                          </label>
+                          <input
+                            type="number"
+                            min={0}
+                            value={row.estoqueMinimo}
+                            onChange={(e) => {
+                              updateVariantRow(idx, 'estoqueMinimo', Number(e.target.value))
+                            }}
+                            style={smallInputStyle}
+                            placeholder="0"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            removeVariantRow(idx)
+                          }}
+                          style={{
+                            padding: '0.375rem 0.5rem',
+                            background: 'transparent',
+                            border: '1px solid var(--black4)',
+                            borderRadius: 'var(--radius)',
+                            color: 'var(--danger)',
+                            fontFamily: 'var(--font-label)',
+                            fontSize: '0.75rem',
+                            cursor: 'pointer',
+                            alignSelf: 'flex-end',
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                      {formErrors.variants?.[idx] && (
+                        <p
+                          style={{
+                            color: 'var(--danger)',
+                            fontSize: '0.72rem',
+                            fontFamily: 'var(--font-body)',
+                            marginTop: '0.2rem',
+                            paddingLeft: '0.25rem',
+                          }}
+                        >
+                          {formErrors.variants[idx]}
+                        </p>
+                      )}
                     </div>
                   ))}
                 </div>

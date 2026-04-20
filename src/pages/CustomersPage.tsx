@@ -1,11 +1,24 @@
-import { useState, FormEvent } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api } from '../lib/api'
 import { validateCPF, validateBRPhone } from '@bonistore/shared'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState, FormEvent } from 'react'
+
+import { api } from '../lib/api'
 import {
-  pageTitle, sectionHeader, listFormLayout, formPanel, formPanelTitle,
-  card, inlineForm, label, input, fieldError,
-  primaryButton, secondaryButton, rowActionButton, rowDangerButton, badge,
+  pageTitle,
+  sectionHeader,
+  listFormLayout,
+  formPanel,
+  formPanelTitle,
+  card,
+  inlineForm,
+  label,
+  input,
+  fieldError,
+  primaryButton,
+  secondaryButton,
+  rowActionButton,
+  rowDangerButton,
+  badge,
 } from '../styles/ui'
 
 interface Customer {
@@ -39,7 +52,6 @@ function formatCurrency(value: number): string {
   return `R$ ${Number(value).toFixed(2).replace('.', ',')}`
 }
 
-
 function validateForm(form: CustomerForm): FormErrors {
   const errors: FormErrors = {}
   if (!form.nome.trim()) errors.nome = 'Nome é obrigatório'
@@ -58,7 +70,8 @@ function validateForm(form: CustomerForm): FormErrors {
 }
 
 function extractApiErrors(err: unknown): FormErrors {
-  const data = (err as { response?: { data?: { errors?: Record<string, string[]> } } })?.response?.data
+  const data = (err as { response?: { data?: { errors?: Record<string, string[]> } } })?.response
+    ?.data
   if (!data?.errors) return {}
   const e = data.errors
   const map: FormErrors = {}
@@ -88,7 +101,7 @@ export function CustomersPage() {
 
   const { data, isPending } = useQuery({
     queryKey: ['customers'],
-    queryFn: () => api.get<{ customers: Customer[] }>('/customers').then(r => r.data.customers),
+    queryFn: () => api.get<{ customers: Customer[] }>('/customers').then((r) => r.data.customers),
   })
   const customers = data ?? []
 
@@ -97,7 +110,7 @@ export function CustomersPage() {
   const [filterStatus, setFilterStatus] = useState<'all' | 'ativo' | 'inativo'>('all')
   const [filterDevedor, setFilterDevedor] = useState<'all' | 'devedores' | 'em_dia'>('all')
 
-  const filteredCustomers = customers.filter(c => {
+  const filteredCustomers = customers.filter((c) => {
     if (filterStatus === 'ativo' && !c.ativo) return false
     if (filterStatus === 'inativo' && c.ativo) return false
     if (filterDevedor === 'devedores' && c.saldoDevedor <= 0) return false
@@ -116,12 +129,12 @@ export function CustomersPage() {
 
   const createMutation = useMutation({
     mutationFn: (body: ReturnType<typeof toApiBody>) =>
-      api.post<{ customer: Customer }>('/customers', body).then(r => r.data.customer),
+      api.post<{ customer: Customer }>('/customers', body).then((r) => r.data.customer),
   })
 
   const editMutation = useMutation({
     mutationFn: ({ id, body }: { id: string; body: ReturnType<typeof toApiBody> }) =>
-      api.put<{ customer: Customer }>(`/customers/${id}`, body).then(r => r.data.customer),
+      api.put<{ customer: Customer }>(`/customers/${id}`, body).then((r) => r.data.customer),
   })
 
   const deactivateMutation = useMutation({
@@ -132,7 +145,10 @@ export function CustomersPage() {
   function handleCreateSubmit(e: FormEvent) {
     e.preventDefault()
     const errors = validateForm(createForm)
-    if (Object.keys(errors).length) { setCreateErrors(errors); return }
+    if (Object.keys(errors).length) {
+      setCreateErrors(errors)
+      return
+    }
     setCreateErrors({})
     createMutation.mutate(toApiBody(createForm), {
       onSuccess: () => {
@@ -140,25 +156,35 @@ export function CustomersPage() {
         setCreateForm(FORM_EMPTY)
         setCreateErrors({})
       },
-      onError: (err) => setCreateErrors(extractApiErrors(err)),
+      onError: (err) => {
+        setCreateErrors(extractApiErrors(err))
+      },
     })
   }
 
   function handleEditSubmit(e: FormEvent) {
     e.preventDefault()
     if (!editingId) return
-    editMutation.mutate({ id: editingId, body: toApiBody(editForm) }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['customers'] })
-        setEditingId(null)
-        setEditForm(FORM_EMPTY)
+    editMutation.mutate(
+      { id: editingId, body: toApiBody(editForm) },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ['customers'] })
+          setEditingId(null)
+          setEditForm(FORM_EMPTY)
+        },
       },
-    })
+    )
   }
 
   function openEdit(customer: Customer) {
     setEditingId(customer.id)
-    setEditForm({ nome: customer.nome, telefone: customer.telefone, cpf: customer.cpf ?? '', email: customer.email ?? '' })
+    setEditForm({
+      nome: customer.nome,
+      telefone: customer.telefone,
+      cpf: customer.cpf ?? '',
+      email: customer.email ?? '',
+    })
   }
 
   return (
@@ -175,13 +201,17 @@ export function CustomersPage() {
             <input
               type="text"
               value={filterSearch}
-              onChange={e => setFilterSearch(e.target.value)}
+              onChange={(e) => {
+                setFilterSearch(e.target.value)
+              }}
               placeholder="Buscar por nome, telefone, CPF ou email..."
               style={{ ...input, flex: '1 1 240px', minWidth: '200px' }}
             />
             <select
               value={filterStatus}
-              onChange={e => setFilterStatus(e.target.value as 'all' | 'ativo' | 'inativo')}
+              onChange={(e) => {
+                setFilterStatus(e.target.value as 'all' | 'ativo' | 'inativo')
+              }}
               style={{ ...input, flex: '0 0 130px', cursor: 'pointer' }}
             >
               <option value="all">Todos</option>
@@ -190,7 +220,9 @@ export function CustomersPage() {
             </select>
             <select
               value={filterDevedor}
-              onChange={e => setFilterDevedor(e.target.value as 'all' | 'devedores' | 'em_dia')}
+              onChange={(e) => {
+                setFilterDevedor(e.target.value as 'all' | 'devedores' | 'em_dia')
+              }}
               style={{ ...input, flex: '0 0 150px', cursor: 'pointer' }}
             >
               <option value="all">Todos saldos</option>
@@ -202,38 +234,97 @@ export function CustomersPage() {
           {isPending ? (
             <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>Carregando...</p>
           ) : customers.length === 0 ? (
-            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>Nenhum cliente cadastrado.</p>
+            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>
+              Nenhum cliente cadastrado.
+            </p>
           ) : filteredCustomers.length === 0 ? (
-            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>Nenhum cliente corresponde aos filtros.</p>
+            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)' }}>
+              Nenhum cliente corresponde aos filtros.
+            </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
               {filteredCustomers.map((customer) => (
                 <div key={customer.id}>
                   {/* Customer card */}
-                  <div style={{ ...card, opacity: customer.ativo ? 1 : 0.6, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+                  <div
+                    style={{
+                      ...card,
+                      opacity: customer.ativo ? 1 : 0.6,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '1rem',
+                    }}
+                  >
                     {/* Info */}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                        <p style={{ fontFamily: 'var(--font-body)', fontSize: '0.9rem', color: 'var(--white)', fontWeight: 500 }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.75rem',
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <p
+                          style={{
+                            fontFamily: 'var(--font-body)',
+                            fontSize: '0.9rem',
+                            color: 'var(--white)',
+                            fontWeight: 500,
+                          }}
+                        >
                           {customer.nome}
                         </p>
                         {!customer.ativo && <span style={badge('danger')}>Inativo</span>}
                       </div>
-                      <div style={{ display: 'flex', gap: '1.25rem', marginTop: '0.3rem', flexWrap: 'wrap' }}>
-                        <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.8rem', color: 'var(--gray)' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: '1.25rem',
+                          marginTop: '0.3rem',
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontFamily: 'var(--font-body)',
+                            fontSize: '0.8rem',
+                            color: 'var(--gray)',
+                          }}
+                        >
                           {customer.telefone}
                         </span>
                         {customer.cpf && (
-                          <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.8rem', color: 'var(--gray)' }}>
+                          <span
+                            style={{
+                              fontFamily: 'var(--font-body)',
+                              fontSize: '0.8rem',
+                              color: 'var(--gray)',
+                            }}
+                          >
                             CPF: {customer.cpf}
                           </span>
                         )}
                         {customer.email && (
-                          <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.8rem', color: 'var(--gray)' }}>
+                          <span
+                            style={{
+                              fontFamily: 'var(--font-body)',
+                              fontSize: '0.8rem',
+                              color: 'var(--gray)',
+                            }}
+                          >
                             {customer.email}
                           </span>
                         )}
-                        <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.75rem', letterSpacing: '0.05em', color: customer.saldoDevedor > 0 ? 'var(--danger)' : 'var(--gray)' }}>
+                        <span
+                          style={{
+                            fontFamily: 'var(--font-label)',
+                            fontSize: '0.75rem',
+                            letterSpacing: '0.05em',
+                            color: customer.saldoDevedor > 0 ? 'var(--danger)' : 'var(--gray)',
+                          }}
+                        >
                           Saldo: {formatCurrency(customer.saldoDevedor)}
                         </span>
                       </div>
@@ -242,14 +333,18 @@ export function CustomersPage() {
                     {/* Actions */}
                     <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
                       <button
-                        onClick={() => editingId === customer.id ? setEditingId(null) : openEdit(customer)}
+                        onClick={() => {
+                          editingId === customer.id ? setEditingId(null) : openEdit(customer)
+                        }}
                         style={rowActionButton}
                       >
                         {editingId === customer.id ? 'Fechar' : 'Editar'}
                       </button>
                       {customer.ativo && (
                         <button
-                          onClick={() => deactivateMutation.mutate(customer.id)}
+                          onClick={() => {
+                            deactivateMutation.mutate(customer.id)
+                          }}
                           disabled={deactivateMutation.isPending}
                           style={rowDangerButton}
                         >
@@ -262,30 +357,96 @@ export function CustomersPage() {
                   {/* Inline edit form */}
                   {editingId === customer.id && (
                     <div style={inlineForm}>
-                      <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                      <form
+                        onSubmit={handleEditSubmit}
+                        style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}
+                      >
+                        <div
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: '1fr 1fr',
+                            gap: '0.75rem',
+                          }}
+                        >
                           <div>
                             <label style={label}>Nome *</label>
-                            <input type="text" required value={editForm.nome} onChange={e => setEditForm({ ...editForm, nome: e.target.value })} style={input} />
+                            <input
+                              type="text"
+                              required
+                              value={editForm.nome}
+                              onChange={(e) => {
+                                setEditForm({ ...editForm, nome: e.target.value })
+                              }}
+                              style={input}
+                            />
                           </div>
                           <div>
                             <label style={label}>Telefone *</label>
-                            <input type="text" required value={editForm.telefone} onChange={e => setEditForm({ ...editForm, telefone: e.target.value })} style={input} placeholder="11999999999" />
+                            <input
+                              type="text"
+                              required
+                              value={editForm.telefone}
+                              onChange={(e) => {
+                                setEditForm({ ...editForm, telefone: e.target.value })
+                              }}
+                              style={input}
+                              placeholder="11999999999"
+                            />
                           </div>
                           <div>
-                            <label style={label}>CPF <span style={{ color: 'var(--gray)', fontWeight: 400 }}>(opcional)</span></label>
-                            <input type="text" value={editForm.cpf} onChange={e => setEditForm({ ...editForm, cpf: e.target.value })} style={input} placeholder="Somente números" />
+                            <label style={label}>
+                              CPF{' '}
+                              <span style={{ color: 'var(--gray)', fontWeight: 400 }}>
+                                (opcional)
+                              </span>
+                            </label>
+                            <input
+                              type="text"
+                              value={editForm.cpf}
+                              onChange={(e) => {
+                                setEditForm({ ...editForm, cpf: e.target.value })
+                              }}
+                              style={input}
+                              placeholder="Somente números"
+                            />
                           </div>
                           <div>
-                            <label style={label}>E-mail <span style={{ color: 'var(--gray)', fontWeight: 400 }}>(opcional)</span></label>
-                            <input type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} style={input} />
+                            <label style={label}>
+                              E-mail{' '}
+                              <span style={{ color: 'var(--gray)', fontWeight: 400 }}>
+                                (opcional)
+                              </span>
+                            </label>
+                            <input
+                              type="email"
+                              value={editForm.email}
+                              onChange={(e) => {
+                                setEditForm({ ...editForm, email: e.target.value })
+                              }}
+                              style={input}
+                            />
                           </div>
                         </div>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <button type="submit" disabled={editMutation.isPending} style={{ ...primaryButton(editMutation.isPending), width: 'auto', padding: '0.5rem 1.25rem' }}>
+                          <button
+                            type="submit"
+                            disabled={editMutation.isPending}
+                            style={{
+                              ...primaryButton(editMutation.isPending),
+                              width: 'auto',
+                              padding: '0.5rem 1.25rem',
+                            }}
+                          >
                             {editMutation.isPending ? 'Salvando...' : 'Salvar'}
                           </button>
-                          <button type="button" onClick={() => { setEditingId(null); setEditForm(FORM_EMPTY) }} style={secondaryButton}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingId(null)
+                              setEditForm(FORM_EMPTY)
+                            }}
+                            style={secondaryButton}
+                          >
                             Cancelar
                           </button>
                         </div>
@@ -302,13 +463,19 @@ export function CustomersPage() {
         <section style={formPanel}>
           <h2 style={formPanelTitle}>Novo cliente</h2>
 
-          <form onSubmit={handleCreateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <form
+            onSubmit={handleCreateSubmit}
+            style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+          >
             <div>
               <label style={label}>Nome *</label>
               <input
                 type="text"
                 value={createForm.nome}
-                onChange={e => { setCreateForm({ ...createForm, nome: e.target.value }); setCreateErrors(ce => ({ ...ce, nome: undefined })) }}
+                onChange={(e) => {
+                  setCreateForm({ ...createForm, nome: e.target.value })
+                  setCreateErrors((ce) => ({ ...ce, nome: undefined }))
+                }}
                 style={{ ...input, borderColor: createErrors.nome ? 'var(--danger)' : undefined }}
                 placeholder="Nome completo"
               />
@@ -320,19 +487,30 @@ export function CustomersPage() {
               <input
                 type="text"
                 value={createForm.telefone}
-                onChange={e => { setCreateForm({ ...createForm, telefone: e.target.value }); setCreateErrors(ce => ({ ...ce, telefone: undefined })) }}
-                style={{ ...input, borderColor: createErrors.telefone ? 'var(--danger)' : undefined }}
+                onChange={(e) => {
+                  setCreateForm({ ...createForm, telefone: e.target.value })
+                  setCreateErrors((ce) => ({ ...ce, telefone: undefined }))
+                }}
+                style={{
+                  ...input,
+                  borderColor: createErrors.telefone ? 'var(--danger)' : undefined,
+                }}
                 placeholder="(11) 99999-9999"
               />
               {createErrors.telefone && <p style={fieldError}>{createErrors.telefone}</p>}
             </div>
 
             <div>
-              <label style={label}>CPF <span style={{ color: 'var(--gray)', fontWeight: 400 }}>(opcional)</span></label>
+              <label style={label}>
+                CPF <span style={{ color: 'var(--gray)', fontWeight: 400 }}>(opcional)</span>
+              </label>
               <input
                 type="text"
                 value={createForm.cpf}
-                onChange={e => { setCreateForm({ ...createForm, cpf: e.target.value }); setCreateErrors(ce => ({ ...ce, cpf: undefined })) }}
+                onChange={(e) => {
+                  setCreateForm({ ...createForm, cpf: e.target.value })
+                  setCreateErrors((ce) => ({ ...ce, cpf: undefined }))
+                }}
                 style={{ ...input, borderColor: createErrors.cpf ? 'var(--danger)' : undefined }}
                 placeholder="Somente números"
               />
@@ -340,18 +518,27 @@ export function CustomersPage() {
             </div>
 
             <div>
-              <label style={label}>E-mail <span style={{ color: 'var(--gray)', fontWeight: 400 }}>(opcional)</span></label>
+              <label style={label}>
+                E-mail <span style={{ color: 'var(--gray)', fontWeight: 400 }}>(opcional)</span>
+              </label>
               <input
                 type="email"
                 value={createForm.email}
-                onChange={e => { setCreateForm({ ...createForm, email: e.target.value }); setCreateErrors(ce => ({ ...ce, email: undefined })) }}
+                onChange={(e) => {
+                  setCreateForm({ ...createForm, email: e.target.value })
+                  setCreateErrors((ce) => ({ ...ce, email: undefined }))
+                }}
                 style={{ ...input, borderColor: createErrors.email ? 'var(--danger)' : undefined }}
                 placeholder="email@exemplo.com"
               />
               {createErrors.email && <p style={fieldError}>{createErrors.email}</p>}
             </div>
 
-            <button type="submit" disabled={createMutation.isPending} style={primaryButton(createMutation.isPending)}>
+            <button
+              type="submit"
+              disabled={createMutation.isPending}
+              style={primaryButton(createMutation.isPending)}
+            >
               {createMutation.isPending ? 'Criando...' : 'Criar cliente'}
             </button>
           </form>

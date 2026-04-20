@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
-import { api } from '../lib/api'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+
+import { api } from '../lib/api'
 import { pageTitle, sectionHeader } from '../styles/ui'
 
 interface SaleItem {
@@ -19,22 +20,31 @@ interface DashboardData {
   today: { totalVendas: number; receita: number }
   dailyRevenue: { dia: string; receita: number }[]
   recentSales: {
-    id: string; total: number; formaPagamento: string; status: string;
-    createdAt: string;
-    customer: { id: string; nome: string } | null;
-    user: { id: string; nome: string };
-    itens: SaleItem[];
+    id: string
+    total: number
+    formaPagamento: string
+    status: string
+    createdAt: string
+    customer: { id: string; nome: string } | null
+    user: { id: string; nome: string }
+    itens: SaleItem[]
   }[]
   lowStockAlerts: {
-    id: string; productName: string; tamanho: string; cor: string;
-    estoque: number; estoqueMinimo: number;
+    id: string
+    productName: string
+    tamanho: string
+    cor: string
+    estoque: number
+    estoqueMinimo: number
   }[]
 }
 
 function formatItems(itens: SaleItem[]): string {
   if (!itens || itens.length === 0) return '---'
   return itens
-    .map(i => `${i.variant.product.nome} (${i.variant.tamanho}/${i.variant.cor}) ×${i.quantidade}`)
+    .map(
+      (i) => `${i.variant.product.nome} (${i.variant.tamanho}/${i.variant.cor}) ×${i.quantidade}`,
+    )
     .join(', ')
 }
 
@@ -44,8 +54,11 @@ function formatMoney(value: number): string {
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString('pt-BR', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   })
 }
 
@@ -98,7 +111,7 @@ const tableCell: React.CSSProperties = {
 export function DashboardPage() {
   const { data, isPending } = useQuery<DashboardData>({
     queryKey: ['dashboard'],
-    queryFn: () => api.get('/dashboard').then(r => r.data),
+    queryFn: () => api.get('/dashboard').then((r) => r.data),
   })
 
   if (isPending) {
@@ -130,14 +143,16 @@ export function DashboardPage() {
 
       {/* Bar chart */}
       <h2 style={sectionHeader}>Receita - Ultimos 7 Dias</h2>
-      <div style={{
-        height: 250,
-        background: 'var(--black2)',
-        border: '1px solid var(--black4)',
-        borderRadius: 'var(--radius-lg)',
-        padding: '1rem',
-        marginBottom: '2rem',
-      }}>
+      <div
+        style={{
+          height: 250,
+          background: 'var(--black2)',
+          border: '1px solid var(--black4)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '1rem',
+          marginBottom: '2rem',
+        }}
+      >
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={dashboard.dailyRevenue}>
             <XAxis
@@ -171,12 +186,14 @@ export function DashboardPage() {
         {/* Recent sales */}
         <div>
           <h2 style={sectionHeader}>Ultimas Vendas</h2>
-          <div style={{
-            background: 'var(--black2)',
-            border: '1px solid var(--black4)',
-            borderRadius: 'var(--radius-lg)',
-            overflow: 'hidden',
-          }}>
+          <div
+            style={{
+              background: 'var(--black2)',
+              border: '1px solid var(--black4)',
+              borderRadius: 'var(--radius-lg)',
+              overflow: 'hidden',
+            }}
+          >
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
@@ -189,10 +206,15 @@ export function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {dashboard.recentSales.map(sale => (
+                {dashboard.recentSales.map((sale) => (
                   <tr key={sale.id}>
                     <td style={tableCell}>{formatDate(sale.createdAt)}</td>
-                    <td style={{ ...tableCell, color: sale.customer ? 'var(--white)' : 'var(--gray)' }}>
+                    <td
+                      style={{
+                        ...tableCell,
+                        color: sale.customer ? 'var(--white)' : 'var(--gray)',
+                      }}
+                    >
                       {sale.customer?.nome ?? '---'}
                     </td>
                     <td style={{ ...tableCell, color: 'var(--gray)', fontSize: '0.75rem' }}>
@@ -214,16 +236,20 @@ export function DashboardPage() {
         <div>
           <h2 style={sectionHeader}>Alertas de Estoque</h2>
           {dashboard.lowStockAlerts.length === 0 ? (
-            <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.85rem' }}>
+            <p
+              style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.85rem' }}
+            >
               Nenhum alerta de estoque
             </p>
           ) : (
-            <div style={{
-              background: 'var(--black2)',
-              border: '1px solid var(--black4)',
-              borderRadius: 'var(--radius-lg)',
-              overflow: 'hidden',
-            }}>
+            <div
+              style={{
+                background: 'var(--black2)',
+                border: '1px solid var(--black4)',
+                borderRadius: 'var(--radius-lg)',
+                overflow: 'hidden',
+              }}
+            >
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
@@ -234,18 +260,20 @@ export function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {dashboard.lowStockAlerts.map(alert => (
+                  {dashboard.lowStockAlerts.map((alert) => (
                     <tr key={alert.id}>
                       <td style={tableCell}>{alert.productName}</td>
                       <td style={{ ...tableCell, color: 'var(--gray)' }}>
                         {alert.tamanho} / {alert.cor}
                       </td>
-                      <td style={{
-                        ...tableCell,
-                        textAlign: 'right',
-                        color: '#ff6b6b',
-                        fontWeight: 500,
-                      }}>
+                      <td
+                        style={{
+                          ...tableCell,
+                          textAlign: 'right',
+                          color: '#ff6b6b',
+                          fontWeight: 500,
+                        }}
+                      >
                         {alert.estoque}
                       </td>
                       <td style={{ ...tableCell, textAlign: 'right', color: 'var(--gray)' }}>

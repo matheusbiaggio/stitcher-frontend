@@ -1,14 +1,27 @@
 import { describe, it, expect } from 'vitest'
+
 import {
-  addItemToCart, removeItemFromCart, updateItemQty,
-  cartTotal, formatMoney, validateCheckout,
-  type CartItem, type Product, type ProductVariant,
+  addItemToCart,
+  removeItemFromCart,
+  updateItemQty,
+  cartTotal,
+  formatMoney,
+  validateCheckout,
+  type CartItem,
+  type Product,
+  type ProductVariant,
 } from '../cart'
 
 // Fixtures
 const variant1: ProductVariant = { id: 'v1', tamanho: 'M', cor: 'Preto', estoque: 5 }
 const variant2: ProductVariant = { id: 'v2', tamanho: 'G', cor: 'Azul', estoque: 3 }
-const product1: Product = { id: 'p1', nome: 'Camiseta', sku: 'CAM-001', preco: 49.90, variants: [variant1, variant2] }
+const product1: Product = {
+  id: 'p1',
+  nome: 'Camiseta',
+  sku: 'CAM-001',
+  preco: 49.9,
+  variants: [variant1, variant2],
+}
 
 function makeCartItem(overrides: Partial<CartItem> = {}): CartItem {
   return {
@@ -16,7 +29,7 @@ function makeCartItem(overrides: Partial<CartItem> = {}): CartItem {
     productNome: 'Camiseta',
     tamanho: 'M',
     cor: 'Preto',
-    precoUnitario: 49.90,
+    precoUnitario: 49.9,
     quantidade: 1,
     estoqueDisponivel: 5,
     ...overrides,
@@ -115,16 +128,16 @@ describe('cartTotal', () => {
   })
 
   it('calculates total for single item', () => {
-    const cart = [makeCartItem({ precoUnitario: 49.90, quantidade: 2 })]
-    expect(cartTotal(cart)).toBeCloseTo(99.80)
+    const cart = [makeCartItem({ precoUnitario: 49.9, quantidade: 2 })]
+    expect(cartTotal(cart)).toBeCloseTo(99.8)
   })
 
   it('sums across multiple items', () => {
     const cart = [
-      makeCartItem({ precoUnitario: 49.90, quantidade: 1 }),
-      makeCartItem({ variantId: 'v2', precoUnitario: 29.90, quantidade: 3 }),
+      makeCartItem({ precoUnitario: 49.9, quantidade: 1 }),
+      makeCartItem({ variantId: 'v2', precoUnitario: 29.9, quantidade: 3 }),
     ]
-    expect(cartTotal(cart)).toBeCloseTo(49.90 + 29.90 * 3)
+    expect(cartTotal(cart)).toBeCloseTo(49.9 + 29.9 * 3)
   })
 })
 
@@ -134,7 +147,7 @@ describe('formatMoney', () => {
   })
 
   it('formats decimal value', () => {
-    expect(formatMoney(49.90)).toMatch(/49,90/)
+    expect(formatMoney(49.9)).toMatch(/49,90/)
   })
 
   it('formats zero', () => {
