@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
 import { type PaymentMethod, type SaleResponse, saleResponseSchema } from '@bonistore/shared'
 
@@ -58,11 +59,25 @@ export function SalesPage() {
   const sales = data ?? []
 
   // Filters
-  const [filterSearch, setFilterSearch] = useState('')
-  const [filterStatus, setFilterStatus] = useState<'all' | 'COMPLETED' | 'CANCELLED'>('all')
-  const [filterPagamento, setFilterPagamento] = useState<'all' | Sale['formaPagamento']>('all')
-  const [filterStartDate, setFilterStartDate] = useState('')
-  const [filterEndDate, setFilterEndDate] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const filterSearch = searchParams.get('search') ?? ''
+  const filterStatus = (searchParams.get('status') ?? 'all') as 'all' | 'COMPLETED' | 'CANCELLED'
+  const filterPagamento = (searchParams.get('pagamento') ?? 'all') as 'all' | Sale['formaPagamento']
+  const filterStartDate = searchParams.get('inicio') ?? ''
+  const filterEndDate = searchParams.get('fim') ?? ''
+
+  function setParam(key: string, value: string) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      if (value === '' || value === 'all') {
+        next.delete(key)
+      } else {
+        next.set(key, value)
+      }
+      return next
+    })
+  }
 
   const filteredSales = sales.filter((sale) => {
     if (filterStatus !== 'all' && sale.status !== filterStatus) return false
@@ -127,7 +142,7 @@ export function SalesPage() {
           type="text"
           value={filterSearch}
           onChange={(e) => {
-            setFilterSearch(e.target.value)
+            setParam('search', e.target.value)
           }}
           placeholder="Buscar por cliente, operador, produto ou SKU..."
           style={{ ...input, flex: '1 1 240px', minWidth: '200px' }}
@@ -135,7 +150,7 @@ export function SalesPage() {
         <select
           value={filterStatus}
           onChange={(e) => {
-            setFilterStatus(e.target.value as 'all' | 'COMPLETED' | 'CANCELLED')
+            setParam('status', e.target.value)
           }}
           style={{ ...input, flex: '0 0 140px', cursor: 'pointer' }}
         >
@@ -146,7 +161,7 @@ export function SalesPage() {
         <select
           value={filterPagamento}
           onChange={(e) => {
-            setFilterPagamento(e.target.value as 'all' | Sale['formaPagamento'])
+            setParam('pagamento', e.target.value)
           }}
           style={{ ...input, flex: '0 0 150px', cursor: 'pointer' }}
         >
@@ -160,7 +175,7 @@ export function SalesPage() {
           type="date"
           value={filterStartDate}
           onChange={(e) => {
-            setFilterStartDate(e.target.value)
+            setParam('inicio', e.target.value)
           }}
           style={{ ...input, flex: '0 0 150px' }}
         />
@@ -168,7 +183,7 @@ export function SalesPage() {
           type="date"
           value={filterEndDate}
           onChange={(e) => {
-            setFilterEndDate(e.target.value)
+            setParam('fim', e.target.value)
           }}
           style={{ ...input, flex: '0 0 150px' }}
         />
