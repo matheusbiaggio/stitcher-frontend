@@ -8,14 +8,12 @@ export const api = axios.create({
   },
 })
 
-// Interceptor: redireciona para /login em 401 automático
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Redirect silencioso — não mostra mensagem
       if (window.location.pathname !== '/login') {
-        window.location.href = '/login'
+        window.dispatchEvent(new CustomEvent('session:expired'))
       }
     }
     return Promise.reject(error)

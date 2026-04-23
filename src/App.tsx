@@ -4,6 +4,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { ROLES } from '@bonistore/shared'
 
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { SessionExpiredBanner } from './components/SessionExpiredBanner'
 import { Layout } from './components/Layout'
 import { PrivateRoute } from './components/PrivateRoute'
 import { useAuth } from './contexts/AuthContext'
@@ -59,8 +60,10 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 
 export function App() {
   return (
-    <Suspense fallback={loadingScreen}>
-      <Routes>
+    <>
+      <SessionExpiredBanner />
+      <Suspense fallback={loadingScreen}>
+        <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route
           path="/"
@@ -183,7 +186,8 @@ export function App() {
           }
         />
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Suspense>
+        </Routes>
+      </Suspense>
+    </>
   )
 }
