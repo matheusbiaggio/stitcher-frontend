@@ -13,13 +13,39 @@ import {
 } from '../cart'
 
 // Fixtures
-const variant1: ProductVariant = { id: 'v1', tamanho: 'M', cor: 'Preto', estoque: 5 }
-const variant2: ProductVariant = { id: 'v2', tamanho: 'G', cor: 'Azul', estoque: 3 }
+const variant1: ProductVariant = {
+  id: 'v1',
+  productId: 'p1',
+  tamanho: 'M',
+  cor: 'Preto',
+  estoque: 5,
+  estoqueMinimo: 2,
+  ativo: true,
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+}
+const variant2: ProductVariant = {
+  id: 'v2',
+  productId: 'p1',
+  tamanho: 'G',
+  cor: 'Azul',
+  estoque: 3,
+  estoqueMinimo: 1,
+  ativo: true,
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+}
 const product1: Product = {
   id: 'p1',
   nome: 'Camiseta',
   sku: 'CAM-001',
+  categoria: 'Tops',
   preco: 49.9,
+  custo: 20,
+  unidade: 'un',
+  ativo: true,
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
   variants: [variant1, variant2],
 }
 

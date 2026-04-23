@@ -1,44 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 
-import { type PaymentMethod } from '@bonistore/shared'
+import { type PaymentMethod, type SaleResponse, saleResponseSchema } from '@bonistore/shared'
 
 import { api } from '../lib/api'
 import { extractApiError } from '../lib/errors'
 import { pageTitle, sectionHeader, card, badge, rowDangerButton, input } from '../styles/ui'
 
-interface SaleCustomer {
-  id: string
-  nome: string
-}
-
-interface SaleUser {
-  id: string
-  nome: string
-}
-
-interface SaleItem {
-  id: string
-  quantidade: number
-  precoUnitario: number
-  variant: {
-    id: string
-    tamanho: string
-    cor: string
-    product: { id: string; nome: string; sku: string }
-  }
-}
-
-interface Sale {
-  id: string
-  total: number
-  status: 'COMPLETED' | 'CANCELLED'
-  formaPagamento: PaymentMethod
-  createdAt: string
-  customer: SaleCustomer | null
-  user: SaleUser
-  itens: SaleItem[]
-}
+type Sale = SaleResponse
+type SaleItem = SaleResponse['itens'][number]
 
 function formatItems(itens: SaleItem[]): string {
   if (!itens || itens.length === 0) return '---'
@@ -82,7 +52,8 @@ export function SalesPage() {
 
   const { data, isPending } = useQuery({
     queryKey: ['sales'],
-    queryFn: () => api.get<{ sales: Sale[] }>('/sales').then((r) => r.data.sales),
+    queryFn: () =>
+      api.get<{ sales: unknown[] }>('/sales').then((r) => r.data.sales.map((s) => saleResponseSchema.parse(s))),
   })
   const sales = data ?? []
 

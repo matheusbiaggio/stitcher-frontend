@@ -1,43 +1,11 @@
+import { dashboardDataSchema, type DashboardData } from '@bonistore/shared'
 import { useQuery } from '@tanstack/react-query'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
 import { api } from '../lib/api'
 import { pageTitle, sectionHeader } from '../styles/ui'
 
-interface SaleItem {
-  id: string
-  quantidade: number
-  precoUnitario: number
-  variant: {
-    id: string
-    tamanho: string
-    cor: string
-    product: { id: string; nome: string; sku: string }
-  }
-}
-
-interface DashboardData {
-  today: { totalVendas: number; receita: number }
-  dailyRevenue: { dia: string; receita: number }[]
-  recentSales: {
-    id: string
-    total: number
-    formaPagamento: string
-    status: string
-    createdAt: string
-    customer: { id: string; nome: string } | null
-    user: { id: string; nome: string }
-    itens: SaleItem[]
-  }[]
-  lowStockAlerts: {
-    id: string
-    productName: string
-    tamanho: string
-    cor: string
-    estoque: number
-    estoqueMinimo: number
-  }[]
-}
+type SaleItem = DashboardData['recentSales'][number]['itens'][number]
 
 function formatItems(itens: SaleItem[]): string {
   if (!itens || itens.length === 0) return '---'
@@ -109,9 +77,9 @@ const tableCell: React.CSSProperties = {
 }
 
 export function DashboardPage() {
-  const { data, isPending } = useQuery<DashboardData>({
+  const { data, isPending } = useQuery({
     queryKey: ['dashboard'],
-    queryFn: () => api.get('/dashboard').then((r) => r.data),
+    queryFn: () => api.get('/dashboard').then((r) => dashboardDataSchema.parse(r.data)),
   })
 
   if (isPending) {

@@ -8,20 +8,10 @@ export interface CartItem {
   estoqueDisponivel: number
 }
 
-export interface ProductVariant {
-  id: string
-  tamanho: string
-  cor: string
-  estoque: number
-}
+import { type ProductVariantResponse, type ProductResponse } from '@bonistore/shared'
 
-export interface Product {
-  id: string
-  nome: string
-  sku: string
-  preco: number
-  variants: ProductVariant[]
-}
+export type ProductVariant = ProductVariantResponse
+export type Product = ProductResponse
 
 export function addItemToCart(
   cart: CartItem[],

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { PAYMENT_METHODS, type PaymentMethod } from '@bonistore/shared'
+import { PAYMENT_METHODS, type PaymentMethod, productResponseSchema } from '@bonistore/shared'
 import { api } from '../lib/api'
 import { extractApiError } from '../lib/errors'
 import {
@@ -59,13 +59,12 @@ export function PdvPage() {
   // Load full catalog — always refetch on mount so newly added products appear immediately
   const { data: allProductsData, isPending: catalogLoading } = useQuery({
     queryKey: ['pdv-catalog'],
-    queryFn: () => api.get<{ products: Product[] }>('/products').then((r) => r.data.products),
+    queryFn: () =>
+      api.get<{ products: unknown[] }>('/products').then((r) => r.data.products.map((p) => productResponseSchema.parse(p))),
     staleTime: 0,
     refetchOnMount: 'always',
   })
-  const allProducts = (allProductsData ?? []).filter(
-    (p) => (p as Product & { ativo?: boolean }).ativo !== false,
-  )
+  const allProducts = (allProductsData ?? []).filter((p) => p.ativo !== false)
 
   // Client-side filter: match nome, SKU, tamanho, cor
   const q = searchInput.trim().toLowerCase()

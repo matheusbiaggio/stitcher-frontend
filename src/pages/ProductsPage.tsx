@@ -1,3 +1,4 @@
+import { type ProductResponse, type ProductVariantResponse, productResponseSchema } from '@bonistore/shared'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, FormEvent } from 'react'
 
@@ -8,27 +9,8 @@ import {
   inputSmall as smallInputStyle,
 } from '../styles/ui'
 
-interface Variant {
-  id: string
-  tamanho: string
-  cor: string
-  estoque: number
-  estoqueMinimo: number
-  ativo: boolean
-}
-
-interface Product {
-  id: string
-  nome: string
-  sku: string
-  categoria: string
-  preco: number
-  custo: number
-  unidade: string
-  ativo: boolean
-  variants: Variant[]
-  createdAt: string
-}
+type Variant = ProductVariantResponse
+type Product = ProductResponse
 
 interface VariantRow {
   tamanho: string
@@ -132,7 +114,8 @@ export function ProductsPage() {
 
   const { data, isPending } = useQuery({
     queryKey: ['products'],
-    queryFn: () => api.get<{ products: Product[] }>('/products').then((r) => r.data.products),
+    queryFn: () =>
+      api.get<{ products: unknown[] }>('/products').then((r) => r.data.products.map((p) => productResponseSchema.parse(p))),
   })
   const products = data ?? []
 

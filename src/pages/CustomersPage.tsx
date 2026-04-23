@@ -1,4 +1,4 @@
-import { validateCPF, validateBRPhone } from '@bonistore/shared'
+import { validateCPF, validateBRPhone, type CustomerResponse, customerResponseSchema } from '@bonistore/shared'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, FormEvent } from 'react'
 
@@ -21,16 +21,7 @@ import {
   badge,
 } from '../styles/ui'
 
-interface Customer {
-  id: string
-  nome: string
-  telefone: string
-  cpf: string | null
-  email: string | null
-  saldoDevedor: number
-  ativo: boolean
-  createdAt: string
-}
+type Customer = CustomerResponse
 
 interface CustomerForm {
   nome: string
@@ -101,7 +92,8 @@ export function CustomersPage() {
 
   const { data, isPending } = useQuery({
     queryKey: ['customers'],
-    queryFn: () => api.get<{ customers: Customer[] }>('/customers').then((r) => r.data.customers),
+    queryFn: () =>
+      api.get<{ customers: unknown[] }>('/customers').then((r) => r.data.customers.map((c) => customerResponseSchema.parse(c))),
   })
   const customers = data ?? []
 

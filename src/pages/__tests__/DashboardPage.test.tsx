@@ -36,18 +36,19 @@ const mockDashboardData = {
   ],
   recentSales: [
     {
-      id: 's1',
+      id: '00000000-0000-0000-0000-000000000001',
       total: 150,
       formaPagamento: 'PIX',
       status: 'COMPLETED',
       createdAt: '2026-04-14T10:00:00Z',
-      customer: { id: 'c1', nome: 'Maria Silva' },
-      user: { id: 'u1', nome: 'Admin' },
+      customer: { id: '00000000-0000-0000-0000-000000000002', nome: 'Maria Silva' },
+      user: { id: '00000000-0000-0000-0000-000000000003', nome: 'Admin' },
+      itens: [],
     },
   ],
   lowStockAlerts: [
     {
-      id: 'v1',
+      id: '00000000-0000-0000-0000-000000000004',
       productName: 'Camiseta',
       tamanho: 'M',
       cor: 'Azul',
