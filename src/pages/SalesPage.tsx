@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { type PaymentMethod } from '@bonistore/shared'
 
 import { api } from '../lib/api'
+import { extractApiError } from '../lib/errors'
 import { pageTitle, sectionHeader, card, badge, rowDangerButton, input } from '../styles/ui'
 
 interface SaleCustomer {
@@ -125,8 +126,7 @@ export function SalesPage() {
       setCancelError(null)
     },
     onError: (err: unknown) => {
-      const e = err as { response?: { data?: { message?: string } } }
-      setCancelError(e.response?.data?.message ?? 'Erro ao cancelar venda')
+      setCancelError(extractApiError(err, 'Erro ao cancelar venda'))
       setConfirmCancelId(null)
     },
   })

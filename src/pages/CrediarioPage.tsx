@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, FormEvent } from 'react'
 
 import { api } from '../lib/api'
+import { extractApiError } from '../lib/errors'
 import {
   pageTitle,
   sectionHeader,
@@ -86,8 +87,7 @@ export function CrediarioPage() {
       // (will auto-clear since devedores list refreshes)
     },
     onError: (err: unknown) => {
-      const e = err as { response?: { data?: { message?: string } } }
-      setErrorMsg(e.response?.data?.message ?? 'Erro ao registrar pagamento')
+      setErrorMsg(extractApiError(err, 'Erro ao registrar pagamento'))
       setSuccessMsg(null)
     },
   })

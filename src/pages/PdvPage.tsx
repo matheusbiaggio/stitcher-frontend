@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { PAYMENT_METHODS, type PaymentMethod } from '@bonistore/shared'
 import { api } from '../lib/api'
+import { extractApiError } from '../lib/errors'
 import {
   type CartItem,
   type Product,
@@ -144,8 +145,7 @@ export function PdvPage() {
         queryClient.invalidateQueries({ queryKey: ['pdv-catalog'] })
       },
       onError: (err: unknown) => {
-        const e = err as { response?: { data?: { message?: string } } }
-        setErrorMsg(e.response?.data?.message ?? 'Erro ao fechar venda')
+        setErrorMsg(extractApiError(err, 'Erro ao fechar venda'))
       },
     })
   }
