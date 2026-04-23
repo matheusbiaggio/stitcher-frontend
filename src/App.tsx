@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 
 import { ROLES } from '@bonistore/shared'
 
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { Layout } from './components/Layout'
 import { PrivateRoute } from './components/PrivateRoute'
 import { useAuth } from './contexts/AuthContext'
@@ -31,7 +32,9 @@ export function App() {
         element={
           <PrivateRoute>
             <Layout>
-              <DashboardPage />
+              <ErrorBoundary>
+                <DashboardPage />
+              </ErrorBoundary>
             </Layout>
           </PrivateRoute>
         }
@@ -42,7 +45,9 @@ export function App() {
           <PrivateRoute>
             <AdminRoute>
               <Layout>
-                <SettingsPage />
+                <ErrorBoundary>
+                  <SettingsPage />
+                </ErrorBoundary>
               </Layout>
             </AdminRoute>
           </PrivateRoute>
@@ -54,7 +59,9 @@ export function App() {
           <PrivateRoute>
             <AdminRoute>
               <Layout>
-                <ProductsPage />
+                <ErrorBoundary>
+                  <ProductsPage />
+                </ErrorBoundary>
               </Layout>
             </AdminRoute>
           </PrivateRoute>
@@ -65,7 +72,9 @@ export function App() {
         element={
           <PrivateRoute>
             <Layout>
-              <CustomersPage />
+              <ErrorBoundary>
+                <CustomersPage />
+              </ErrorBoundary>
             </Layout>
           </PrivateRoute>
         }
@@ -76,7 +85,9 @@ export function App() {
           <PrivateRoute>
             <AdminRoute>
               <Layout>
-                <CustomerHistoryPage />
+                <ErrorBoundary>
+                  <CustomerHistoryPage />
+                </ErrorBoundary>
               </Layout>
             </AdminRoute>
           </PrivateRoute>
@@ -87,7 +98,9 @@ export function App() {
         element={
           <PrivateRoute>
             <Layout>
-              <PdvPage />
+              <ErrorBoundary>
+                <PdvPage />
+              </ErrorBoundary>
             </Layout>
           </PrivateRoute>
         }
@@ -98,7 +111,9 @@ export function App() {
           <PrivateRoute>
             <AdminRoute>
               <Layout>
-                <SalesPage />
+                <ErrorBoundary>
+                  <SalesPage />
+                </ErrorBoundary>
               </Layout>
             </AdminRoute>
           </PrivateRoute>
@@ -110,7 +125,9 @@ export function App() {
           <PrivateRoute>
             <AdminRoute>
               <Layout>
-                <CrediarioPage />
+                <ErrorBoundary>
+                  <CrediarioPage />
+                </ErrorBoundary>
               </Layout>
             </AdminRoute>
           </PrivateRoute>
@@ -122,7 +139,9 @@ export function App() {
           <PrivateRoute>
             <AdminRoute>
               <Layout>
-                <ReportsPage />
+                <ErrorBoundary>
+                  <ReportsPage />
+                </ErrorBoundary>
               </Layout>
             </AdminRoute>
           </PrivateRoute>
