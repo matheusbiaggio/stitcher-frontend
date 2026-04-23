@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeAll } from 'vitest'
 
 import { ErrorBoundary } from '../ErrorBoundary'
 
-function Bomb() {
+function Bomb(): React.ReactNode {
   throw new Error('test error')
 }
 
