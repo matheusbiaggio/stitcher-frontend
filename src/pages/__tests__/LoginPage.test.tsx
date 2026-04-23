@@ -4,14 +4,12 @@ import userEvent from '@testing-library/user-event'
 
 import { LoginPage } from '../LoginPage'
 
-// Mock useAuth
+// Mock useAuth + useAuthActions
 const mockLogin = vi.fn()
 const mockUser = { current: null as null | { id: string; role: string } }
 vi.mock('../../contexts/AuthContext', () => ({
-  useAuth: () => ({
-    login: mockLogin,
-    user: mockUser.current,
-  }),
+  useAuth: () => ({ user: mockUser.current, loading: false }),
+  useAuthActions: () => ({ login: mockLogin, logout: vi.fn() }),
 }))
 
 // Mock useNavigate

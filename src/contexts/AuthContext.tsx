@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { type Role } from '@bonistore/shared'
 import { api } from '../lib/api'
 
@@ -9,20 +9,23 @@ interface User {
   role: Role
 }
 
-interface AuthContextValue {
+interface AuthState {
   user: User | null
   loading: boolean
+}
+
+interface AuthActions {
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null)
+const AuthStateContext = createContext<AuthState | null>(null)
+const AuthActionsContext = createContext<AuthActions | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Verifica sessão existente ao carregar
   useEffect(() => {
     api
       .get('/auth/me')
@@ -31,23 +34,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false))
   }, [])
 
-  async function login(email: string, password: string) {
+  const login = useCallback(async (email: string, password: string) => {
     const res = await api.post('/auth/login', { email, password })
     setUser(res.data.user)
-  }
+  }, [])
 
-  async function logout() {
+  const logout = useCallback(async () => {
     await api.post('/auth/logout')
     setUser(null)
-  }
+  }, [])
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>
+    <AuthStateContext.Provider value={{ user, loading }}>
+      <AuthActionsContext.Provider value={{ login, logout }}>
+        {children}
+      </AuthActionsContext.Provider>
+    </AuthStateContext.Provider>
   )
 }
 
-export function useAuth() {
-  const ctx = useContext(AuthContext)
+export function useAuth(): AuthState {
+  const ctx = useContext(AuthStateContext)
   if (!ctx) throw new Error('useAuth deve ser usado dentro de AuthProvider')
+  return ctx
+}
+
+export function useAuthActions(): AuthActions {
+  const ctx = useContext(AuthActionsContext)
+  if (!ctx) throw new Error('useAuthActions deve ser usado dentro de AuthProvider')
   return ctx
 }

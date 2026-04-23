@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 
 import { ROLES, type Role } from '@bonistore/shared'
 
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth, useAuthActions } from '../contexts/AuthContext'
 
 interface LayoutProps {
   children: ReactNode
@@ -56,7 +56,8 @@ const navLinkStyle = ({ isActive }: { isActive: boolean }): CSSProperties => ({
 })
 
 export function Layout({ children }: LayoutProps) {
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
+  const { logout } = useAuthActions()
   const navigate = useNavigate()
 
   async function handleLogout() {
