@@ -56,13 +56,11 @@ export function PdvPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
-  // Load full catalog — always refetch on mount so newly added products appear immediately
   const { data: allProductsData, isPending: catalogLoading } = useQuery({
     queryKey: ['pdv-catalog'],
     queryFn: () =>
       api.get<{ products: unknown[] }>('/products').then((r) => r.data.products.map((p) => productResponseSchema.parse(p))),
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 5 * 60 * 1000,
   })
   const allProducts = (allProductsData ?? []).filter((p) => p.ativo !== false)
 
