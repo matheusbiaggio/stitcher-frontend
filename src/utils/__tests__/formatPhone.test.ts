@@ -58,6 +58,21 @@ describe('maskBRPhone (progressive input mask)', () => {
     expect(maskBRPhone('11912345678999')).toBe('(11) 91234-5678')
   })
 
+  it('forces mobile format at 11 digits even when 3rd digit is not 9', () => {
+    // 11 dígitos = celular por regra (não cabe em fixo)
+    expect(maskBRPhone('11111111111')).toBe('(11) 11111-1111')
+    expect(maskBRPhone('12345678901')).toBe('(12) 34567-8901')
+  })
+
+  it('keeps landline format at exactly 10 digits when 3rd digit is not 9', () => {
+    expect(maskBRPhone('1111111111')).toBe('(11) 1111-1111')
+  })
+
+  it('switches from landline to mobile format as the 11th digit is typed', () => {
+    expect(maskBRPhone('1111111111')).toBe('(11) 1111-1111') // 10 digits, landline
+    expect(maskBRPhone('11111111111')).toBe('(11) 11111-1111') // 11 digits, mobile
+  })
+
   it('strips non-digits during typing', () => {
     expect(maskBRPhone('(11) abc 91234')).toBe('(11) 91234')
     expect(maskBRPhone('11-9123-4567')).toBe('(11) 91234-567')

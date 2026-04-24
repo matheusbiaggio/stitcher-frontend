@@ -35,7 +35,10 @@ export function maskBRPhone(value: string): string {
 
   const ddd = digits.slice(0, 2)
   const rest = digits.slice(2)
-  const isMobile = rest[0] === '9'
+  // Celular é 11 dígitos totais; fixo é 10. Detectamos celular quando
+  // o 1º dígito após o DDD é 9 (regra pós-2016) OU quando o usuário já
+  // digitou 11 dígitos no total (passa de fixo).
+  const isMobile = rest[0] === '9' || digits.length === 11
 
   if (isMobile) {
     // (XX) XXXXX-XXXX — 5+4
