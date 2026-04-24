@@ -1,8 +1,11 @@
-import { productResponseSchema } from '@bonistore/shared'
+import { isBirthdayWeek, productResponseSchema } from '@bonistore/shared'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import dayjs from 'dayjs'
+import timezone from 'dayjs/plugin/timezone'
+import utc from 'dayjs/plugin/utc'
+import { useEffect, useMemo, useState } from 'react'
 
-import { Cart, type CustomerResult } from '../components/pdv/Cart'
+import { Cart, type CustomerResult, type SelectedCustomer } from '../components/pdv/Cart'
 import { ProductCatalog } from '../components/pdv/ProductCatalog'
 import { api } from '../lib/api'
 import { extractApiError } from '../lib/errors'
@@ -25,15 +28,20 @@ import {
   validateCheckout,
 } from '../utils/cart'
 
+dayjs.extend(utc)
+dayjs.extend(timezone)
+
+const BIRTHDAY_DEFAULT_PCT = 10
+const BIRTHDAY_MOTIVO = 'Desconto de aniversário'
+const TZ = 'America/Sao_Paulo'
+
 export function PdvPage() {
   const queryClient = useQueryClient()
   const [searchInput, setSearchInput] = useState('')
   const [cart, setCart] = useState<CartItem[]>([])
   const [formaPagamento, setFormaPagamento] = useState<FormaPagamento | null>(null)
   const [customerSearch, setCustomerSearch] = useState('')
-  const [selectedCustomer, setSelectedCustomer] = useState<{ id: string; nome: string } | null>(
-    null,
-  )
+  const [selectedCustomer, setSelectedCustomer] = useState<SelectedCustomer | null>(null)
   const [discountMode, setDiscountMode] = useState<DiscountMode>('none')
   const [saleDiscount, setSaleDiscount] = useState<SaleLevelDiscountState>(SALE_DISCOUNT_EMPTY)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -78,6 +86,28 @@ export function PdvPage() {
   const checkoutMutation = useMutation({
     mutationFn: (body: object) => api.post('/sales', body).then((r) => r.data),
   })
+
+  const isBirthdayCustomer = useMemo(() => {
+    if (!selectedCustomer?.dataNascimento) return false
+    const today = dayjs().tz(TZ).format('YYYY-MM-DD')
+    try {
+      return isBirthdayWeek(selectedCustomer.dataNascimento, today)
+    } catch {
+      return false
+    }
+  }, [selectedCustomer?.dataNascimento])
+
+  // Auto-aplica desconto de aniversário quando cliente é selecionado pela primeira vez
+  // (ou trocado para outro) E modo atual é 'none' — respeita intervenção manual do caixa.
+  useEffect(() => {
+    if (!isBirthdayCustomer) return
+    if (discountMode !== 'none') return
+    setDiscountMode('total')
+    setSaleDiscount({ tipo: 'percent', valor: BIRTHDAY_DEFAULT_PCT, motivo: BIRTHDAY_MOTIVO })
+    // Depend only on selected customer id so the effect doesn't re-trigger
+    // when caixa later edits discountMode/saleDiscount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCustomer?.id])
 
   function addToCart(variant: ProductVariant, product: Product) {
     setCart((prev) => addItemToCart(prev, variant, product))
@@ -189,6 +219,7 @@ export function PdvPage() {
           customerResults={customerResults}
           discountMode={discountMode}
           saleDiscount={saleDiscount}
+          isBirthdayCustomer={isBirthdayCustomer}
           errorMsg={errorMsg}
           successMsg={successMsg}
           isPending={checkoutMutation.isPending}

@@ -24,6 +24,13 @@ export interface CustomerResult {
   nome: string
   telefone: string
   saldoDevedor: number
+  dataNascimento: string | null
+}
+
+export interface SelectedCustomer {
+  id: string
+  nome: string
+  dataNascimento: string | null
 }
 
 const paymentLabels: Record<PaymentMethod, string> = {
@@ -40,11 +47,12 @@ const paymentOptions = PAYMENT_METHODS.map((v) => ({ value: v, label: paymentLab
 interface CartProps {
   cart: CartItem[]
   formaPagamento: FormaPagamento | null
-  selectedCustomer: { id: string; nome: string } | null
+  selectedCustomer: SelectedCustomer | null
   customerSearch: string
   customerResults: CustomerResult[]
   discountMode: DiscountMode
   saleDiscount: SaleLevelDiscountState
+  isBirthdayCustomer: boolean
   errorMsg: string | null
   successMsg: string | null
   isPending: boolean
@@ -55,7 +63,7 @@ interface CartProps {
   onSaleDiscountChange: (field: keyof SaleLevelDiscountState, value: string) => void
   onSelectPayment: (forma: FormaPagamento) => void
   onCustomerSearchChange: (value: string) => void
-  onSelectCustomer: (customer: { id: string; nome: string }) => void
+  onSelectCustomer: (customer: SelectedCustomer) => void
   onClearCustomer: () => void
   onCheckout: () => void
 }
@@ -68,6 +76,7 @@ export function Cart({
   customerResults,
   discountMode,
   saleDiscount,
+  isBirthdayCustomer,
   errorMsg,
   successMsg,
   isPending,
@@ -311,9 +320,10 @@ export function Cart({
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 background: 'var(--black3)',
-                border: '1px solid var(--black4)',
+                border: `1px solid ${isBirthdayCustomer ? 'var(--success, #4ade80)' : 'var(--black4)'}`,
                 borderRadius: 'var(--radius)',
                 padding: '0.5rem 0.75rem',
+                gap: '0.5rem',
               }}
             >
               <span
@@ -321,9 +331,31 @@ export function Cart({
                   fontFamily: 'var(--font-body)',
                   fontSize: '0.875rem',
                   color: 'var(--white)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  flexWrap: 'wrap',
                 }}
               >
                 {selectedCustomer.nome}
+                {isBirthdayCustomer && (
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-label)',
+                      fontSize: '0.65rem',
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      color: 'var(--success, #4ade80)',
+                      background: 'rgba(74, 222, 128, 0.12)',
+                      padding: '0.15rem 0.5rem',
+                      borderRadius: '999px',
+                      whiteSpace: 'nowrap',
+                    }}
+                    title="Cliente faz aniversário nesta semana"
+                  >
+                    🎂 Aniversariante
+                  </span>
+                )}
               </span>
               <button onClick={onClearCustomer} style={{ ...rowActionButton, fontSize: '0.65rem' }}>
                 Trocar
@@ -346,7 +378,11 @@ export function Cart({
                     <button
                       key={c.id}
                       onClick={() => {
-                        onSelectCustomer({ id: c.id, nome: c.nome })
+                        onSelectCustomer({
+                          id: c.id,
+                          nome: c.nome,
+                          dataNascimento: c.dataNascimento,
+                        })
                       }}
                       style={{
                         display: 'flex',
