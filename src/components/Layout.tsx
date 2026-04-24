@@ -36,7 +36,7 @@ function navItems({ role }: { role?: Role }): NavItem[] {
       { type: 'separator', key: 'sep-ins', label: 'Gestão' },
       { type: 'link', to: '/', label: 'Dashboard' },
       { type: 'link', to: '/relatorios', label: 'Relatórios' },
-      { type: 'link', to: '/relatorios/itens-procurados', label: 'Itens procurados' },
+      { type: 'link', to: '/relatorios/itens-procurados', label: 'Relatório de procurados' },
       { type: 'link', to: '/configuracoes', label: 'Configurações' },
     )
   }
