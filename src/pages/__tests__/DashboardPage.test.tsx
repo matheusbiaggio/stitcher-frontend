@@ -37,6 +37,9 @@ const mockDashboardData = {
   recentSales: [
     {
       id: '00000000-0000-0000-0000-000000000001',
+      subtotal: 150,
+      desconto: 0,
+      descontoMotivo: null,
       total: 150,
       formaPagamento: 'PIX',
       status: 'COMPLETED',

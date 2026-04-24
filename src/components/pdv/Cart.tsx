@@ -1,18 +1,22 @@
 import { PAYMENT_METHODS, type PaymentMethod } from '@bonistore/shared'
+
 import {
   type CartItem,
+  type DiscountMode,
   type FormaPagamento,
-  cartTotal,
+  type SaleLevelDiscountState,
+  cartBreakdown,
   formatMoney,
+  itemPrecoUnitario,
 } from '../../utils/cart'
 import {
-  sectionHeader,
-  label,
+  fieldError,
   input,
+  label,
   primaryButton,
   rowActionButton,
   rowDangerButton,
-  fieldError,
+  sectionHeader,
 } from '../../styles/ui'
 
 export interface CustomerResult {
@@ -39,11 +43,16 @@ interface CartProps {
   selectedCustomer: { id: string; nome: string } | null
   customerSearch: string
   customerResults: CustomerResult[]
+  discountMode: DiscountMode
+  saleDiscount: SaleLevelDiscountState
   errorMsg: string | null
   successMsg: string | null
   isPending: boolean
   onUpdateQty: (variantId: string, quantidade: number) => void
   onRemoveItem: (variantId: string) => void
+  onItemDiscountChange: (variantId: string, pct: number | undefined) => void
+  onDiscountModeChange: (mode: DiscountMode) => void
+  onSaleDiscountChange: (field: keyof SaleLevelDiscountState, value: string) => void
   onSelectPayment: (forma: FormaPagamento) => void
   onCustomerSearchChange: (value: string) => void
   onSelectCustomer: (customer: { id: string; nome: string }) => void
@@ -57,18 +66,23 @@ export function Cart({
   selectedCustomer,
   customerSearch,
   customerResults,
+  discountMode,
+  saleDiscount,
   errorMsg,
   successMsg,
   isPending,
   onUpdateQty,
   onRemoveItem,
+  onItemDiscountChange,
+  onDiscountModeChange,
+  onSaleDiscountChange,
   onSelectPayment,
   onCustomerSearchChange,
   onSelectCustomer,
   onClearCustomer,
   onCheckout,
 }: CartProps) {
-  const total = cartTotal(cart)
+  const breakdown = cartBreakdown(cart, discountMode, saleDiscount)
 
   return (
     <section>
@@ -98,106 +112,146 @@ export function Cart({
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  {['Produto', 'Qtd', 'Unit', 'Total', ''].map((col) => (
-                    <th
-                      key={col}
-                      style={{
-                        fontFamily: 'var(--font-label)',
-                        fontSize: '0.65rem',
-                        letterSpacing: '0.1em',
-                        color: 'var(--gray)',
-                        textAlign: 'left',
-                        paddingBottom: '0.5rem',
-                        textTransform: 'uppercase',
-                      }}
-                    >
-                      {col}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {cart.map((item) => (
-                  <tr key={item.variantId} style={{ borderTop: '1px solid var(--black4)' }}>
-                    <td style={{ padding: '0.5rem 0', paddingRight: '0.5rem' }}>
-                      <p
-                        style={{
-                          fontFamily: 'var(--font-body)',
-                          fontSize: '0.8rem',
-                          color: 'var(--white)',
-                          marginBottom: '0.15rem',
-                        }}
-                      >
-                        {item.productNome}
-                      </p>
-                      <p
+                  {['Produto', 'Qtd', 'Unit', ...(discountMode === 'item' ? ['% off'] : []), 'Total', ''].map(
+                    (col) => (
+                      <th
+                        key={col}
                         style={{
                           fontFamily: 'var(--font-label)',
                           fontSize: '0.65rem',
+                          letterSpacing: '0.1em',
                           color: 'var(--gray)',
-                          letterSpacing: '0.05em',
+                          textAlign: 'left',
+                          paddingBottom: '0.5rem',
+                          textTransform: 'uppercase',
                         }}
                       >
-                        {item.tamanho} / {item.cor}
-                      </p>
-                    </td>
-                    <td style={{ padding: '0.5rem 0.25rem', whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                        <button
-                          onClick={() => onUpdateQty(item.variantId, item.quantidade - 1)}
-                          style={{ ...rowActionButton, padding: '0.2rem 0.4rem', fontSize: '0.75rem' }}
-                        >
-                          −
-                        </button>
-                        <span
+                        {col}
+                      </th>
+                    ),
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {cart.map((item) => {
+                  const unitPrice = itemPrecoUnitario(item)
+                  const hasDiscount = unitPrice < item.precoUnitarioOriginal
+                  return (
+                    <tr key={item.variantId} style={{ borderTop: '1px solid var(--black4)' }}>
+                      <td style={{ padding: '0.5rem 0', paddingRight: '0.5rem' }}>
+                        <p
                           style={{
                             fontFamily: 'var(--font-body)',
                             fontSize: '0.8rem',
                             color: 'var(--white)',
-                            minWidth: '1.5rem',
-                            textAlign: 'center',
+                            marginBottom: '0.15rem',
                           }}
                         >
-                          {item.quantidade}
-                        </span>
-                        <button
-                          onClick={() => onUpdateQty(item.variantId, item.quantidade + 1)}
-                          disabled={item.quantidade >= item.estoqueDisponivel}
-                          style={{ ...rowActionButton, padding: '0.2rem 0.4rem', fontSize: '0.75rem' }}
+                          {item.productNome}
+                        </p>
+                        <p
+                          style={{
+                            fontFamily: 'var(--font-label)',
+                            fontSize: '0.65rem',
+                            color: 'var(--gray)',
+                            letterSpacing: '0.05em',
+                          }}
                         >
-                          +
+                          {item.tamanho} / {item.cor}
+                        </p>
+                      </td>
+                      <td style={{ padding: '0.5rem 0.25rem', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <button
+                            onClick={() => {
+                              onUpdateQty(item.variantId, item.quantidade - 1)
+                            }}
+                            style={{ ...rowActionButton, padding: '0.2rem 0.4rem', fontSize: '0.75rem' }}
+                          >
+                            −
+                          </button>
+                          <span
+                            style={{
+                              fontFamily: 'var(--font-body)',
+                              fontSize: '0.8rem',
+                              color: 'var(--white)',
+                              minWidth: '1.5rem',
+                              textAlign: 'center',
+                            }}
+                          >
+                            {item.quantidade}
+                          </span>
+                          <button
+                            onClick={() => {
+                              onUpdateQty(item.variantId, item.quantidade + 1)
+                            }}
+                            disabled={item.quantidade >= item.estoqueDisponivel}
+                            style={{ ...rowActionButton, padding: '0.2rem 0.4rem', fontSize: '0.75rem' }}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </td>
+                      <td
+                        style={{
+                          padding: '0.5rem 0.25rem',
+                          fontFamily: 'var(--font-body)',
+                          fontSize: '0.8rem',
+                          color: hasDiscount ? 'var(--gray)' : 'var(--gray)',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {hasDiscount ? (
+                          <>
+                            <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>
+                              {formatMoney(item.precoUnitarioOriginal)}
+                            </span>{' '}
+                            <span style={{ color: 'var(--white)' }}>{formatMoney(unitPrice)}</span>
+                          </>
+                        ) : (
+                          formatMoney(item.precoUnitarioOriginal)
+                        )}
+                      </td>
+                      {discountMode === 'item' && (
+                        <td style={{ padding: '0.5rem 0.25rem', whiteSpace: 'nowrap' }}>
+                          <input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={item.descontoPct ?? ''}
+                            onChange={(e) => {
+                              const raw = e.target.value
+                              onItemDiscountChange(
+                                item.variantId,
+                                raw === '' ? undefined : Number(raw),
+                              )
+                            }}
+                            placeholder="0"
+                            style={{ ...input, width: '4.5rem', padding: '0.3rem 0.4rem', fontSize: '0.8rem' }}
+                          />
+                        </td>
+                      )}
+                      <td
+                        style={{
+                          padding: '0.5rem 0.25rem',
+                          fontFamily: 'var(--font-body)',
+                          fontSize: '0.8rem',
+                          color: 'var(--white)',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {formatMoney(unitPrice * item.quantidade)}
+                      </td>
+                      <td style={{ padding: '0.5rem 0' }}>
+                        <button onClick={() => {
+                          onRemoveItem(item.variantId)
+                        }} style={rowDangerButton}>
+                          ×
                         </button>
-                      </div>
-                    </td>
-                    <td
-                      style={{
-                        padding: '0.5rem 0.25rem',
-                        fontFamily: 'var(--font-body)',
-                        fontSize: '0.8rem',
-                        color: 'var(--gray)',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {formatMoney(item.precoUnitario)}
-                    </td>
-                    <td
-                      style={{
-                        padding: '0.5rem 0.25rem',
-                        fontFamily: 'var(--font-body)',
-                        fontSize: '0.8rem',
-                        color: 'var(--white)',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {formatMoney(item.precoUnitario * item.quantidade)}
-                    </td>
-                    <td style={{ padding: '0.5rem 0' }}>
-                      <button onClick={() => onRemoveItem(item.variantId)} style={rowDangerButton}>
-                        ×
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -210,7 +264,9 @@ export function Cart({
             {paymentOptions.map((opt) => (
               <button
                 key={opt.value}
-                onClick={() => onSelectPayment(opt.value)}
+                onClick={() => {
+                  onSelectPayment(opt.value)
+                }}
                 style={{
                   padding: '0.5rem',
                   background: formaPagamento === opt.value ? 'var(--white)' : 'var(--black3)',
@@ -254,7 +310,13 @@ export function Cart({
                 padding: '0.5rem 0.75rem',
               }}
             >
-              <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.875rem', color: 'var(--white)' }}>
+              <span
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '0.875rem',
+                  color: 'var(--white)',
+                }}
+              >
                 {selectedCustomer.nome}
               </span>
               <button onClick={onClearCustomer} style={{ ...rowActionButton, fontSize: '0.65rem' }}>
@@ -267,7 +329,9 @@ export function Cart({
                 type="text"
                 placeholder="Nome, telefone ou CPF..."
                 value={customerSearch}
-                onChange={(e) => onCustomerSearchChange(e.target.value)}
+                onChange={(e) => {
+                  onCustomerSearchChange(e.target.value)
+                }}
                 style={{ ...input, marginBottom: '0.5rem' }}
               />
               {customerResults.length > 0 && (
@@ -275,7 +339,9 @@ export function Cart({
                   {customerResults.map((c) => (
                     <button
                       key={c.id}
-                      onClick={() => onSelectCustomer({ id: c.id, nome: c.nome })}
+                      onClick={() => {
+                        onSelectCustomer({ id: c.id, nome: c.nome })
+                      }}
                       style={{
                         display: 'flex',
                         justifyContent: 'space-between',
@@ -293,7 +359,13 @@ export function Cart({
                     >
                       <span>{c.nome}</span>
                       {c.saldoDevedor > 0 && (
-                        <span style={{ fontFamily: 'var(--font-label)', fontSize: '0.65rem', color: 'var(--danger)' }}>
+                        <span
+                          style={{
+                            fontFamily: 'var(--font-label)',
+                            fontSize: '0.65rem',
+                            color: 'var(--danger)',
+                          }}
+                        >
                           Saldo: {formatMoney(c.saldoDevedor)}
                         </span>
                       )}
@@ -302,7 +374,9 @@ export function Cart({
                 </div>
               )}
               {customerSearch.length >= 1 && customerResults.length === 0 && (
-                <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.8rem' }}>
+                <p
+                  style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.8rem' }}
+                >
                   Nenhum cliente encontrado
                 </p>
               )}
@@ -310,31 +384,164 @@ export function Cart({
           )}
         </div>
 
-        {/* Total */}
+        {/* Discount */}
+        <div style={{ marginBottom: '1.25rem' }}>
+          <label style={label}>Desconto</label>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            {(['none', 'item', 'total'] as DiscountMode[]).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => {
+                  onDiscountModeChange(mode)
+                }}
+                style={{
+                  flex: 1,
+                  padding: '0.4rem',
+                  background: discountMode === mode ? 'var(--white)' : 'var(--black3)',
+                  border: `1px solid ${discountMode === mode ? 'var(--white)' : 'var(--black4)'}`,
+                  borderRadius: 'var(--radius)',
+                  color: discountMode === mode ? 'var(--black)' : 'var(--gray)',
+                  fontFamily: 'var(--font-label)',
+                  fontSize: '0.7rem',
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  cursor: 'pointer',
+                  fontWeight: discountMode === mode ? 700 : 400,
+                }}
+              >
+                {mode === 'none' && 'Nenhum'}
+                {mode === 'item' && 'Por item'}
+                {mode === 'total' && 'No total'}
+              </button>
+            ))}
+          </div>
+
+          {discountMode === 'total' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <select
+                  value={saleDiscount.tipo}
+                  onChange={(e) => {
+                    onSaleDiscountChange('tipo', e.target.value)
+                  }}
+                  style={{ ...input, width: '5.5rem', cursor: 'pointer' }}
+                >
+                  <option value="percent">%</option>
+                  <option value="reais">R$</option>
+                </select>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={saleDiscount.valor === 0 ? '' : saleDiscount.valor}
+                  onChange={(e) => {
+                    onSaleDiscountChange('valor', e.target.value)
+                  }}
+                  placeholder="0"
+                  style={{ ...input, flex: 1 }}
+                />
+              </div>
+              <textarea
+                placeholder="Motivo (opcional)"
+                value={saleDiscount.motivo}
+                onChange={(e) => {
+                  onSaleDiscountChange('motivo', e.target.value)
+                }}
+                maxLength={500}
+                style={{
+                  ...input,
+                  minHeight: '60px',
+                  resize: 'vertical',
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '0.8rem',
+                }}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Breakdown */}
         <div
           style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
             borderTop: '1px solid var(--black4)',
             paddingTop: '1rem',
             marginBottom: '1rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.4rem',
           }}
         >
-          <span
-            style={{
-              fontFamily: 'var(--font-label)',
-              fontSize: '0.8rem',
-              letterSpacing: '0.1em',
-              color: 'var(--gray)',
-              textTransform: 'uppercase',
-            }}
-          >
-            Total
-          </span>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', color: 'var(--white)' }}>
-            {formatMoney(total)}
-          </span>
+          {breakdown.desconto > 0 && (
+            <>
+              <div
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              >
+                <span
+                  style={{
+                    fontFamily: 'var(--font-body)',
+                    fontSize: '0.8rem',
+                    color: 'var(--gray)',
+                  }}
+                >
+                  Subtotal
+                </span>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-body)',
+                    fontSize: '0.9rem',
+                    color: 'var(--gray)',
+                  }}
+                >
+                  {formatMoney(breakdown.subtotal)}
+                </span>
+              </div>
+              <div
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              >
+                <span
+                  style={{
+                    fontFamily: 'var(--font-body)',
+                    fontSize: '0.8rem',
+                    color: 'var(--success, #4ade80)',
+                  }}
+                >
+                  Desconto
+                </span>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-body)',
+                    fontSize: '0.9rem',
+                    color: 'var(--success, #4ade80)',
+                  }}
+                >
+                  − {formatMoney(breakdown.desconto)}
+                </span>
+              </div>
+            </>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span
+              style={{
+                fontFamily: 'var(--font-label)',
+                fontSize: '0.8rem',
+                letterSpacing: '0.1em',
+                color: 'var(--gray)',
+                textTransform: 'uppercase',
+              }}
+            >
+              Total
+            </span>
+            <span
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '1.5rem',
+                color: 'var(--white)',
+              }}
+            >
+              {formatMoney(breakdown.total)}
+            </span>
+          </div>
         </div>
 
         {errorMsg && (

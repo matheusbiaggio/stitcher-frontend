@@ -304,16 +304,38 @@ export function SalesPage() {
                   {sale.user.nome}
                 </span>
 
-                {/* Total */}
+                {/* Total (com breakdown de desconto se houver) */}
                 <span
                   style={{
                     fontFamily: 'var(--font-body)',
                     fontSize: '0.85rem',
                     color: 'var(--white)',
                     fontWeight: 500,
+                    textAlign: 'right',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-end',
                   }}
+                  title={
+                    sale.desconto > 0
+                      ? `Subtotal ${formatMoney(sale.subtotal)} − desconto ${formatMoney(sale.desconto)}${sale.descontoMotivo ? ` (${sale.descontoMotivo})` : ''}`
+                      : undefined
+                  }
                 >
                   {formatMoney(sale.total)}
+                  {sale.desconto > 0 && (
+                    <small
+                      style={{
+                        fontFamily: 'var(--font-label)',
+                        fontSize: '0.65rem',
+                        color: 'var(--success, #4ade80)',
+                        fontWeight: 400,
+                        marginTop: '0.1rem',
+                      }}
+                    >
+                      −{formatMoney(sale.desconto)}
+                    </small>
+                  )}
                 </span>
 
                 {/* Status */}

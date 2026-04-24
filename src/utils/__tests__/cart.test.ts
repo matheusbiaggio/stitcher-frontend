@@ -5,7 +5,13 @@ import {
   removeItemFromCart,
   updateItemQty,
   cartTotal,
+  cartBreakdown,
+  clearAllItemDiscounts,
   formatMoney,
+  hasAnyItemDiscount,
+  itemPrecoUnitario,
+  setItemDiscount,
+  SALE_DISCOUNT_EMPTY,
   validateCheckout,
   type CartItem,
   type Product,
@@ -55,7 +61,7 @@ function makeCartItem(overrides: Partial<CartItem> = {}): CartItem {
     productNome: 'Camiseta',
     tamanho: 'M',
     cor: 'Preto',
-    precoUnitario: 49.9,
+    precoUnitarioOriginal: 49.9,
     quantidade: 1,
     estoqueDisponivel: 5,
     ...overrides,
@@ -154,14 +160,14 @@ describe('cartTotal', () => {
   })
 
   it('calculates total for single item', () => {
-    const cart = [makeCartItem({ precoUnitario: 49.9, quantidade: 2 })]
+    const cart = [makeCartItem({ precoUnitarioOriginal: 49.9, quantidade: 2 })]
     expect(cartTotal(cart)).toBeCloseTo(99.8)
   })
 
   it('sums across multiple items', () => {
     const cart = [
-      makeCartItem({ precoUnitario: 49.9, quantidade: 1 }),
-      makeCartItem({ variantId: 'v2', precoUnitario: 29.9, quantidade: 3 }),
+      makeCartItem({ precoUnitarioOriginal: 49.9, quantidade: 1 }),
+      makeCartItem({ variantId: 'v2', precoUnitarioOriginal: 29.9, quantidade: 3 }),
     ]
     expect(cartTotal(cart)).toBeCloseTo(49.9 + 29.9 * 3)
   })
@@ -189,34 +195,144 @@ describe('validateCheckout', () => {
   const cart = [makeCartItem()]
 
   it('returns null for valid checkout (PIX, no customer)', () => {
-    expect(validateCheckout(cart, 'PIX', null)).toBeNull()
+    expect(validateCheckout(cart, 'PIX', null, { subtotal: 0, desconto: 0, total: 0 })).toBeNull()
   })
 
   it('returns null for valid CREDIARIO with customer', () => {
-    expect(validateCheckout(cart, 'CREDIARIO', 'customer-id')).toBeNull()
+    expect(validateCheckout(cart, 'CREDIARIO', 'customer-id', { subtotal: 0, desconto: 0, total: 0 })).toBeNull()
   })
 
   it('returns error when cart is empty', () => {
-    expect(validateCheckout([], 'PIX', null)).toBe('Adicione produtos à sacola')
+    expect(validateCheckout([], 'PIX', null, { subtotal: 0, desconto: 0, total: 0 })).toBe('Adicione produtos à sacola')
   })
 
   it('returns error when no payment method selected', () => {
-    expect(validateCheckout(cart, null, null)).toBe('Selecione forma de pagamento')
+    expect(validateCheckout(cart, null, null, { subtotal: 0, desconto: 0, total: 0 })).toBe('Selecione forma de pagamento')
   })
 
   it('returns error for CREDIARIO without customer', () => {
-    expect(validateCheckout(cart, 'CREDIARIO', null)).toBe('Selecione um cliente para Crediário')
+    expect(validateCheckout(cart, 'CREDIARIO', null, { subtotal: 0, desconto: 0, total: 0 })).toBe('Selecione um cliente para Crediário')
   })
 
   it('allows DINHEIRO without customer', () => {
-    expect(validateCheckout(cart, 'DINHEIRO', null)).toBeNull()
+    expect(validateCheckout(cart, 'DINHEIRO', null, { subtotal: 0, desconto: 0, total: 0 })).toBeNull()
   })
 
   it('allows CARTAO without customer', () => {
-    expect(validateCheckout(cart, 'CARTAO', null)).toBeNull()
+    expect(validateCheckout(cart, 'CARTAO', null, { subtotal: 0, desconto: 0, total: 0 })).toBeNull()
   })
 
   it('allows PIX with optional customer', () => {
-    expect(validateCheckout(cart, 'PIX', 'customer-id')).toBeNull()
+    expect(validateCheckout(cart, 'PIX', 'customer-id', { subtotal: 0, desconto: 0, total: 0 })).toBeNull()
+  })
+})
+
+describe('setItemDiscount', () => {
+  it('assigns a percent to the matching item', () => {
+    const cart = [makeCartItem({ variantId: 'v1' }), makeCartItem({ variantId: 'v2' })]
+    const next = setItemDiscount(cart, 'v1', 20)
+    expect(next[0].descontoPct).toBe(20)
+    expect(next[1].descontoPct).toBeUndefined()
+  })
+
+  it('clears percent when set to 0 or undefined', () => {
+    const cart = [makeCartItem({ variantId: 'v1', descontoPct: 10 })]
+    expect(setItemDiscount(cart, 'v1', 0)[0].descontoPct).toBeUndefined()
+    expect(setItemDiscount(cart, 'v1', undefined)[0].descontoPct).toBeUndefined()
+  })
+})
+
+describe('clearAllItemDiscounts', () => {
+  it('removes descontoPct from every item', () => {
+    const cart = [
+      makeCartItem({ variantId: 'v1', descontoPct: 10 }),
+      makeCartItem({ variantId: 'v2', descontoPct: 25 }),
+    ]
+    const next = clearAllItemDiscounts(cart)
+    expect(next.every((i) => i.descontoPct === undefined)).toBe(true)
+  })
+})
+
+describe('itemPrecoUnitario', () => {
+  it('returns precoUnitarioOriginal when no discount', () => {
+    expect(itemPrecoUnitario(makeCartItem({ precoUnitarioOriginal: 100 }))).toBe(100)
+  })
+
+  it('applies percent discount', () => {
+    expect(itemPrecoUnitario(makeCartItem({ precoUnitarioOriginal: 100, descontoPct: 20 }))).toBe(80)
+  })
+})
+
+describe('hasAnyItemDiscount', () => {
+  it('returns false when no item has discount', () => {
+    expect(hasAnyItemDiscount([makeCartItem(), makeCartItem({ variantId: 'v2' })])).toBe(false)
+  })
+
+  it('returns true when at least one item has a discount', () => {
+    expect(hasAnyItemDiscount([makeCartItem({ descontoPct: 10 })])).toBe(true)
+  })
+})
+
+describe('cartBreakdown', () => {
+  it('computes with no discount (mode=none)', () => {
+    const r = cartBreakdown(
+      [makeCartItem({ precoUnitarioOriginal: 50, quantidade: 2 })],
+      'none',
+      SALE_DISCOUNT_EMPTY,
+    )
+    expect(r.subtotal).toBe(100)
+    expect(r.desconto).toBe(0)
+    expect(r.total).toBe(100)
+  })
+
+  it('computes item-level discount', () => {
+    const r = cartBreakdown(
+      [makeCartItem({ precoUnitarioOriginal: 100, quantidade: 1, descontoPct: 20 })],
+      'item',
+      SALE_DISCOUNT_EMPTY,
+    )
+    expect(r.subtotal).toBe(100)
+    expect(r.desconto).toBe(20)
+    expect(r.total).toBe(80)
+  })
+
+  it('computes sale-level percent discount', () => {
+    const r = cartBreakdown(
+      [makeCartItem({ precoUnitarioOriginal: 100, quantidade: 2 })],
+      'total',
+      { tipo: 'percent', valor: 10, motivo: '' },
+    )
+    expect(r.subtotal).toBe(200)
+    expect(r.desconto).toBe(20)
+    expect(r.total).toBe(180)
+  })
+
+  it('computes sale-level BRL discount', () => {
+    const r = cartBreakdown(
+      [makeCartItem({ precoUnitarioOriginal: 100, quantidade: 2 })],
+      'total',
+      { tipo: 'reais', valor: 15, motivo: '' },
+    )
+    expect(r.desconto).toBe(15)
+    expect(r.total).toBe(185)
+  })
+
+  it('caps total at 0 when discount exceeds subtotal', () => {
+    const r = cartBreakdown(
+      [makeCartItem({ precoUnitarioOriginal: 50, quantidade: 1 })],
+      'total',
+      { tipo: 'reais', valor: 100, motivo: '' },
+    )
+    expect(r.total).toBe(0)
+  })
+
+  it('ignores saleDiscount when mode=none', () => {
+    const r = cartBreakdown(
+      [makeCartItem({ precoUnitarioOriginal: 100, quantidade: 1 })],
+      'none',
+      { tipo: 'percent', valor: 50, motivo: '' },
+    )
+    expect(r.desconto).toBe(0)
+    expect(r.total).toBe(100)
   })
 })
