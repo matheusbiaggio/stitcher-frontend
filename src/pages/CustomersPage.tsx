@@ -27,6 +27,7 @@ import {
   toCustomerApiBody,
   validateCustomerForm,
 } from '../utils/customerFormValidation'
+import { formatBRDate } from '../utils/formatDate'
 
 type Customer = CustomerResponse
 type FormErrors = CustomerFormErrors
@@ -282,6 +283,17 @@ export function CustomersPage() {
                             }}
                           >
                             {customer.email}
+                          </span>
+                        )}
+                        {customer.dataNascimento && (
+                          <span
+                            style={{
+                              fontFamily: 'var(--font-body)',
+                              fontSize: '0.8rem',
+                              color: 'var(--gray)',
+                            }}
+                          >
+                            Nasc.: {formatBRDate(customer.dataNascimento)}
                           </span>
                         )}
                         <span
