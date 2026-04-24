@@ -124,7 +124,7 @@ export function Layout({ children }: LayoutProps) {
                 {item.label}
               </div>
             ) : (
-              <NavLink key={item.to} to={item.to} style={navLinkStyle}>
+              <NavLink key={item.to} to={item.to} end style={navLinkStyle}>
                 {item.label}
               </NavLink>
             ),
