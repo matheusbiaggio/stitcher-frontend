@@ -197,17 +197,23 @@ export function Cart({
                           padding: '0.5rem 0.25rem',
                           fontFamily: 'var(--font-body)',
                           fontSize: '0.8rem',
-                          color: hasDiscount ? 'var(--gray)' : 'var(--gray)',
+                          color: 'var(--gray)',
                           whiteSpace: 'nowrap',
                         }}
                       >
                         {hasDiscount ? (
-                          <>
-                            <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
+                            <span
+                              style={{
+                                textDecoration: 'line-through',
+                                opacity: 0.6,
+                                fontSize: '0.7rem',
+                              }}
+                            >
                               {formatMoney(item.precoUnitarioOriginal)}
-                            </span>{' '}
+                            </span>
                             <span style={{ color: 'var(--white)' }}>{formatMoney(unitPrice)}</span>
-                          </>
+                          </div>
                         ) : (
                           formatMoney(item.precoUnitarioOriginal)
                         )}
