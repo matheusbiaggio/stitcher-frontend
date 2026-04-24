@@ -1,7 +1,11 @@
 import axios from 'axios'
 
+// Em dev: '/api' é proxiado pelo Vite (vite.config.ts) para http://localhost:3001
+// Em prod: VITE_API_BASE_URL aponta para o backend (ex.: https://bonistore-api.onrender.com/api)
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api'
+
 export const api = axios.create({
-  baseURL: '/api', // proxy do Vite em dev, URL absoluta em prod
+  baseURL: BASE_URL,
   withCredentials: true, // OBRIGATÓRIO para enviar httpOnly cookies
   headers: {
     'Content-Type': 'application/json',
