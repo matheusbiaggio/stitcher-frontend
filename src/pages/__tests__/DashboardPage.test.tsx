@@ -67,7 +67,6 @@ function dashboardDispatcher(
   options: {
     dashboardData?: unknown
     birthdays?: unknown
-    messages?: unknown
   } = {},
 ) {
   return (url: string) => {
@@ -78,9 +77,6 @@ function dashboardDispatcher(
     }
     if (url === '/customers/birthdays') {
       return Promise.resolve({ data: { birthdays: options.birthdays ?? [] } })
-    }
-    if (url === '/birthday-messages') {
-      return Promise.resolve({ data: { messages: options.messages ?? [] } })
     }
     return Promise.reject(new Error(`unexpected url: ${url}`))
   }

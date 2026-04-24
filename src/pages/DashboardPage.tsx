@@ -2,7 +2,6 @@ import { dashboardDataSchema, type DashboardData } from '@bonistore/shared'
 import { useQuery } from '@tanstack/react-query'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
-import { BirthdayMessagesPanel } from '../components/BirthdayMessagesPanel'
 import { BirthdaysWidget } from '../components/BirthdaysWidget'
 import { api } from '../lib/api'
 import { pageTitle, sectionHeader } from '../styles/ui'
@@ -110,11 +109,6 @@ export function DashboardPage() {
           <p style={metricLabel}>Receita Hoje</p>
           <p style={metricValue}>{formatMoney(dashboard.today.receita)}</p>
         </div>
-      </div>
-
-      {/* Birthday messages panel (only rendered when there are pending messages) */}
-      <div style={{ marginBottom: '2rem' }}>
-        <BirthdayMessagesPanel />
       </div>
 
       {/* Birthdays week widget */}
