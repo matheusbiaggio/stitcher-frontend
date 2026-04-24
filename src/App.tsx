@@ -21,6 +21,14 @@ const CustomersPage = lazy(() =>
 const DashboardPage = lazy(() =>
   import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })),
 )
+const ItensProcuradosPage = lazy(() =>
+  import('./pages/ItensProcuradosPage').then((m) => ({ default: m.ItensProcuradosPage })),
+)
+const ItensProcuradosReportPage = lazy(() =>
+  import('./pages/ItensProcuradosReportPage').then((m) => ({
+    default: m.ItensProcuradosReportPage,
+  })),
+)
 const LoginPage = lazy(() =>
   import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })),
 )
@@ -118,6 +126,18 @@ export function App() {
           }
         />
         <Route
+          path="/itens-procurados"
+          element={
+            <PrivateRoute>
+              <Layout>
+                <ErrorBoundary>
+                  <ItensProcuradosPage />
+                </ErrorBoundary>
+              </Layout>
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/clientes/:id/historico"
           element={
             <PrivateRoute>
@@ -179,6 +199,20 @@ export function App() {
                 <Layout>
                   <ErrorBoundary>
                     <ReportsPage />
+                  </ErrorBoundary>
+                </Layout>
+              </AdminRoute>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/relatorios/itens-procurados"
+          element={
+            <PrivateRoute>
+              <AdminRoute>
+                <Layout>
+                  <ErrorBoundary>
+                    <ItensProcuradosReportPage />
                   </ErrorBoundary>
                 </Layout>
               </AdminRoute>

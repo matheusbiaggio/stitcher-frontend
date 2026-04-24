@@ -28,6 +28,7 @@ function navItems({ role }: { role?: Role }): NavItem[] {
   items.push(
     { type: 'separator', key: 'sep-cad', label: 'Cadastros' },
     { type: 'link', to: '/clientes', label: 'Clientes' },
+    { type: 'link', to: '/itens-procurados', label: 'Itens procurados' },
   )
   if (isAdmin) {
     items.push({ type: 'link', to: '/produtos', label: 'Produtos' })
@@ -35,6 +36,7 @@ function navItems({ role }: { role?: Role }): NavItem[] {
       { type: 'separator', key: 'sep-ins', label: 'Gestão' },
       { type: 'link', to: '/', label: 'Dashboard' },
       { type: 'link', to: '/relatorios', label: 'Relatórios' },
+      { type: 'link', to: '/relatorios/itens-procurados', label: 'Itens procurados' },
       { type: 'link', to: '/configuracoes', label: 'Configurações' },
     )
   }
