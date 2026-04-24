@@ -2,6 +2,7 @@ import { dashboardDataSchema, type DashboardData } from '@bonistore/shared'
 import { useQuery } from '@tanstack/react-query'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
+import { BirthdaysWidget } from '../components/BirthdaysWidget'
 import { api } from '../lib/api'
 import { pageTitle, sectionHeader } from '../styles/ui'
 
@@ -107,6 +108,11 @@ export function DashboardPage() {
           <p style={metricLabel}>Receita Hoje</p>
           <p style={metricValue}>{formatMoney(dashboard.today.receita)}</p>
         </div>
+      </div>
+
+      {/* Birthdays widget */}
+      <div style={{ marginBottom: '2rem' }}>
+        <BirthdaysWidget />
       </div>
 
       {/* Bar chart */}

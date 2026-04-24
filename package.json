@@ -15,6 +15,7 @@
     "@bonistore/shared": "*",
     "@tanstack/react-query": "^5.99.0",
     "axios": "^1.7.0",
+    "dayjs": "^1.11.20",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.0.0",

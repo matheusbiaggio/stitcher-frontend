@@ -1,5 +1,6 @@
-import { validateCPF, validateBRPhone, type CustomerResponse, customerResponseSchema } from '@bonistore/shared'
+import { type CustomerResponse, customerResponseSchema } from '@bonistore/shared'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import dayjs from 'dayjs'
 import { useState, FormEvent } from 'react'
 
 import { api } from '../lib/api'
@@ -20,44 +21,26 @@ import {
   rowDangerButton,
   badge,
 } from '../styles/ui'
+import {
+  type CustomerForm,
+  type CustomerFormErrors,
+  toCustomerApiBody,
+  validateCustomerForm,
+} from '../utils/customerFormValidation'
 
 type Customer = CustomerResponse
+type FormErrors = CustomerFormErrors
 
-interface CustomerForm {
-  nome: string
-  telefone: string
-  cpf: string
-  email: string
+const FORM_EMPTY: CustomerForm = {
+  nome: '',
+  telefone: '',
+  cpf: '',
+  email: '',
+  dataNascimento: '',
 }
-
-interface FormErrors {
-  nome?: string
-  telefone?: string
-  cpf?: string
-  email?: string
-}
-
-const FORM_EMPTY: CustomerForm = { nome: '', telefone: '', cpf: '', email: '' }
 
 function formatCurrency(value: number): string {
   return `R$ ${Number(value).toFixed(2).replace('.', ',')}`
-}
-
-function validateForm(form: CustomerForm): FormErrors {
-  const errors: FormErrors = {}
-  if (!form.nome.trim()) errors.nome = 'Nome é obrigatório'
-  if (!form.telefone.trim()) {
-    errors.telefone = 'Telefone é obrigatório'
-  } else if (!validateBRPhone(form.telefone)) {
-    errors.telefone = 'Telefone inválido — informe DDD + número (ex: 11999999999)'
-  }
-  if (form.cpf.trim()) {
-    if (!validateCPF(form.cpf)) errors.cpf = 'CPF inválido'
-  }
-  if (form.email.trim()) {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = 'E-mail inválido'
-  }
-  return errors
 }
 
 function extractApiErrors(err: unknown): FormErrors {
@@ -70,17 +53,8 @@ function extractApiErrors(err: unknown): FormErrors {
   if (e.telefone?.length) map.telefone = e.telefone[0]
   if (e.cpf?.length) map.cpf = e.cpf[0]
   if (e.email?.length) map.email = e.email[0]
+  if (e.dataNascimento?.length) map.dataNascimento = e.dataNascimento[0]
   return map
-}
-
-/** Strip empty optional strings to undefined so Zod .optional() accepts them */
-function toApiBody(form: CustomerForm) {
-  return {
-    nome: form.nome,
-    telefone: form.telefone.replace(/\D/g, ''),
-    cpf: form.cpf.trim() ? form.cpf.replace(/\D/g, '') : undefined,
-    email: form.email.trim() ? form.email : undefined,
-  }
 }
 
 export function CustomersPage() {
@@ -120,12 +94,12 @@ export function CustomersPage() {
   })
 
   const createMutation = useMutation({
-    mutationFn: (body: ReturnType<typeof toApiBody>) =>
+    mutationFn: (body: ReturnType<typeof toCustomerApiBody>) =>
       api.post<{ customer: Customer }>('/customers', body).then((r) => r.data.customer),
   })
 
   const editMutation = useMutation({
-    mutationFn: ({ id, body }: { id: string; body: ReturnType<typeof toApiBody> }) =>
+    mutationFn: ({ id, body }: { id: string; body: ReturnType<typeof toCustomerApiBody> }) =>
       api.put<{ customer: Customer }>(`/customers/${id}`, body).then((r) => r.data.customer),
   })
 
@@ -136,13 +110,13 @@ export function CustomersPage() {
 
   function handleCreateSubmit(e: FormEvent) {
     e.preventDefault()
-    const errors = validateForm(createForm)
+    const errors = validateCustomerForm(createForm)
     if (Object.keys(errors).length) {
       setCreateErrors(errors)
       return
     }
     setCreateErrors({})
-    createMutation.mutate(toApiBody(createForm), {
+    createMutation.mutate(toCustomerApiBody(createForm), {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['customers'] })
         setCreateForm(FORM_EMPTY)
@@ -158,7 +132,7 @@ export function CustomersPage() {
     e.preventDefault()
     if (!editingId) return
     editMutation.mutate(
-      { id: editingId, body: toApiBody(editForm) },
+      { id: editingId, body: toCustomerApiBody(editForm) },
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: ['customers'] })
@@ -176,6 +150,7 @@ export function CustomersPage() {
       telefone: customer.telefone,
       cpf: customer.cpf ?? '',
       email: customer.email ?? '',
+      dataNascimento: customer.dataNascimento ?? '',
     })
   }
 
@@ -418,6 +393,23 @@ export function CustomersPage() {
                               style={input}
                             />
                           </div>
+                          <div>
+                            <label style={label}>
+                              Data de nascimento{' '}
+                              <span style={{ color: 'var(--gray)', fontWeight: 400 }}>
+                                (opcional)
+                              </span>
+                            </label>
+                            <input
+                              type="date"
+                              value={editForm.dataNascimento}
+                              onChange={(e) => {
+                                setEditForm({ ...editForm, dataNascimento: e.target.value })
+                              }}
+                              style={input}
+                              max={dayjs().format('YYYY-MM-DD')}
+                            />
+                          </div>
                         </div>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
                           <button
@@ -524,6 +516,29 @@ export function CustomersPage() {
                 placeholder="email@exemplo.com"
               />
               {createErrors.email && <p style={fieldError}>{createErrors.email}</p>}
+            </div>
+
+            <div>
+              <label style={label}>
+                Data de nascimento{' '}
+                <span style={{ color: 'var(--gray)', fontWeight: 400 }}>(opcional)</span>
+              </label>
+              <input
+                type="date"
+                value={createForm.dataNascimento}
+                onChange={(e) => {
+                  setCreateForm({ ...createForm, dataNascimento: e.target.value })
+                  setCreateErrors((ce) => ({ ...ce, dataNascimento: undefined }))
+                }}
+                style={{
+                  ...input,
+                  borderColor: createErrors.dataNascimento ? 'var(--danger)' : undefined,
+                }}
+                max={dayjs().format('YYYY-MM-DD')}
+              />
+              {createErrors.dataNascimento && (
+                <p style={fieldError}>{createErrors.dataNascimento}</p>
+              )}
             </div>
 
             <button
