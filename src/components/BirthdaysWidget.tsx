@@ -3,7 +3,6 @@ import {
   composeBirthdayMessage,
   endOfWeekSunday,
   startOfWeekMonday,
-  storeSettingsResponseSchema,
   type BirthdayItem,
 } from '@bonistore/shared'
 import { useQuery } from '@tanstack/react-query'
@@ -75,18 +74,6 @@ async function fetchBirthdaysRange(from: string, to: string): Promise<BirthdayIt
   return birthdaysResponseSchema.parse(r.data).birthdays
 }
 
-async function fetchStorePhone(): Promise<string | null> {
-  try {
-    const r = await api.get<unknown>('/settings/store')
-    const parsed = storeSettingsResponseSchema.parse(
-      (r.data as { settings: unknown }).settings,
-    )
-    return parsed.lojaTelefone
-  } catch {
-    return null
-  }
-}
-
 function buildWaMeUrl(telefone: string, text: string): string {
   const d = telefone.replace(/\D/g, '')
   const full = d.startsWith('55') ? d : `55${d}`
@@ -116,10 +103,9 @@ interface DayCellProps {
   isToday: boolean
   isPast: boolean
   items: BirthdayItem[]
-  lojaTelefone: string | null
 }
 
-function DayCell({ iso, label, isToday, isPast, items, lojaTelefone }: DayCellProps) {
+function DayCell({ iso, label, isToday, isPast, items }: DayCellProps) {
   return (
     <div
       style={{
@@ -205,7 +191,7 @@ function DayCell({ iso, label, isToday, isPast, items, lojaTelefone }: DayCellPr
                 </span>
                 {isToday && hasPhone && (
                   <a
-                    href={buildWaMeUrl(b.telefone, composeBirthdayMessage(b.nome, lojaTelefone))}
+                    href={buildWaMeUrl(b.telefone, composeBirthdayMessage(b.nome))}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={sendBtn}
@@ -234,13 +220,6 @@ export function BirthdaysWidget() {
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
   })
-
-  const storePhoneQuery = useQuery({
-    queryKey: ['settings', 'store', 'phone'],
-    queryFn: fetchStorePhone,
-    staleTime: 60_000,
-  })
-  const lojaTelefone = storePhoneQuery.data ?? null
 
   const dates = weekDates(from)
   const grouped = new Map<string, BirthdayItem[]>()
@@ -291,7 +270,6 @@ export function BirthdaysWidget() {
               isToday={iso === today}
               isPast={iso < today}
               items={grouped.get(iso) ?? []}
-              lojaTelefone={lojaTelefone}
             />
           ))}
         </div>

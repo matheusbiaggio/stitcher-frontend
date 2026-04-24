@@ -1,9 +1,8 @@
 import { useState, useEffect, FormEvent } from 'react'
 
-import { ROLES, type Role, type StoreSettingsResponse } from '@bonistore/shared'
+import { ROLES, type Role } from '@bonistore/shared'
 
 import { api } from '../lib/api'
-import { maskBRPhone } from '../utils/formatPhone'
 
 const roleLabels: Record<Role, string> = {
   admin: 'Admin',
@@ -44,42 +43,9 @@ export function SettingsPage() {
   const [formLoading, setFormLoading] = useState(false)
   const [deactivatingId, setDeactivatingId] = useState<string | null>(null)
 
-  // Store settings (lojaTelefone)
-  const [lojaTelefone, setLojaTelefone] = useState('')
-  const [savingStore, setSavingStore] = useState(false)
-  const [storeMsg, setStoreMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
-
   useEffect(() => {
     fetchUsers()
-    void fetchStoreSettings()
   }, [])
-
-  async function fetchStoreSettings() {
-    try {
-      const res = await api.get<{ settings: StoreSettingsResponse }>('/settings/store')
-      setLojaTelefone(maskBRPhone(res.data.settings.lojaTelefone ?? ''))
-    } catch {
-      // silencioso — interceptor trata 401
-    }
-  }
-
-  async function handleSaveStore(e: FormEvent) {
-    e.preventDefault()
-    setSavingStore(true)
-    setStoreMsg(null)
-    try {
-      const digits = lojaTelefone.replace(/\D/g, '')
-      await api.put('/settings/store', {
-        lojaTelefone: digits.length === 0 ? null : digits,
-      })
-      setStoreMsg({ type: 'ok', text: 'Configurações salvas.' })
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
-      setStoreMsg({ type: 'err', text: msg ?? 'Erro ao salvar' })
-    } finally {
-      setSavingStore(false)
-    }
-  }
 
   async function fetchUsers() {
     try {
@@ -160,92 +126,6 @@ export function SettingsPage() {
       >
         CONFIGURAÇÕES
       </h1>
-
-      {/* Seção: Mensagens de aniversário */}
-      <section
-        style={{
-          background: 'var(--black2)',
-          border: '1px solid var(--black4)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '1.5rem',
-          marginBottom: '2rem',
-        }}
-      >
-        <h2
-          style={{
-            fontFamily: 'var(--font-label)',
-            fontSize: '0.8rem',
-            letterSpacing: '0.15em',
-            textTransform: 'uppercase',
-            color: 'var(--gray)',
-            marginBottom: '0.5rem',
-          }}
-        >
-          Mensagens de aniversário
-        </h2>
-        <p
-          style={{
-            fontFamily: 'var(--font-body)',
-            fontSize: '0.8rem',
-            color: 'var(--gray)',
-            marginBottom: '1rem',
-            maxWidth: '640px',
-          }}
-        >
-          Telefone da loja que aparece como assinatura ao final da mensagem enviada pelo WhatsApp.
-          Deixe em branco se não quiser assinar. As mensagens são geradas automaticamente todo dia
-          às 12h e aparecem no Dashboard para envio em lote.
-        </p>
-        <form
-          onSubmit={handleSaveStore}
-          style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', flexWrap: 'wrap' }}
-        >
-          <div style={{ flex: '1 1 260px', minWidth: '240px' }}>
-            <label style={labelStyle}>Telefone da loja</label>
-            <input
-              type="text"
-              value={lojaTelefone}
-              onChange={(e) => {
-                setLojaTelefone(maskBRPhone(e.target.value))
-                setStoreMsg(null)
-              }}
-              placeholder="(11) 99999-9999"
-              style={inputStyle}
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={savingStore}
-            style={{
-              padding: '0.75rem 1.25rem',
-              background: savingStore ? 'var(--gray2)' : 'var(--white)',
-              color: 'var(--black)',
-              fontFamily: 'var(--font-label)',
-              fontSize: '0.75rem',
-              letterSpacing: '0.15em',
-              textTransform: 'uppercase',
-              borderRadius: 'var(--radius)',
-              cursor: savingStore ? 'not-allowed' : 'pointer',
-              fontWeight: 600,
-              border: 'none',
-            }}
-          >
-            {savingStore ? 'Salvando...' : 'Salvar'}
-          </button>
-        </form>
-        {storeMsg && (
-          <p
-            style={{
-              marginTop: '0.75rem',
-              color: storeMsg.type === 'ok' ? 'var(--success, #4ade80)' : 'var(--danger)',
-              fontFamily: 'var(--font-body)',
-              fontSize: '0.8rem',
-            }}
-          >
-            {storeMsg.text}
-          </p>
-        )}
-      </section>
 
       <div
         style={{
