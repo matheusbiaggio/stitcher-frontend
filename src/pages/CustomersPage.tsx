@@ -28,6 +28,7 @@ import {
   validateCustomerForm,
 } from '../utils/customerFormValidation'
 import { formatBRDate } from '../utils/formatDate'
+import { maskBRPhone } from '../utils/formatPhone'
 
 type Customer = CustomerResponse
 type FormErrors = CustomerFormErrors
@@ -148,7 +149,7 @@ export function CustomersPage() {
     setEditingId(customer.id)
     setEditForm({
       nome: customer.nome,
-      telefone: customer.telefone,
+      telefone: maskBRPhone(customer.telefone),
       cpf: customer.cpf ?? '',
       email: customer.email ?? '',
       dataNascimento: customer.dataNascimento ?? '',
@@ -366,10 +367,13 @@ export function CustomersPage() {
                               required
                               value={editForm.telefone}
                               onChange={(e) => {
-                                setEditForm({ ...editForm, telefone: e.target.value })
+                                setEditForm({
+                                  ...editForm,
+                                  telefone: maskBRPhone(e.target.value),
+                                })
                               }}
                               style={input}
-                              placeholder="11999999999"
+                              placeholder="(11) 99999-9999"
                             />
                           </div>
                           <div>
@@ -484,7 +488,7 @@ export function CustomersPage() {
                 type="text"
                 value={createForm.telefone}
                 onChange={(e) => {
-                  setCreateForm({ ...createForm, telefone: e.target.value })
+                  setCreateForm({ ...createForm, telefone: maskBRPhone(e.target.value) })
                   setCreateErrors((ce) => ({ ...ce, telefone: undefined }))
                 }}
                 style={{

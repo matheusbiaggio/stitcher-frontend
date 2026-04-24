@@ -16,7 +16,6 @@ dayjs.extend(utc)
 dayjs.extend(timezone)
 
 const TZ = 'America/Sao_Paulo'
-const STALE_FIVE_MIN = 5 * 60 * 1000
 
 function todayInBR(): string {
   return dayjs().tz(TZ).format('YYYY-MM-DD')
@@ -180,7 +179,7 @@ export function BirthdaysWidget() {
   const query = useQuery({
     queryKey: ['birthdays', 'week', from, to],
     queryFn: () => fetchBirthdaysRange(from, to),
-    staleTime: STALE_FIVE_MIN,
+    refetchOnMount: 'always',
     refetchOnWindowFocus: true,
   })
 

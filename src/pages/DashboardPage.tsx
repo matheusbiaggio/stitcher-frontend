@@ -81,6 +81,7 @@ export function DashboardPage() {
   const { data, isPending } = useQuery({
     queryKey: ['dashboard'],
     queryFn: () => api.get('/dashboard').then((r) => dashboardDataSchema.parse(r.data)),
+    refetchOnMount: 'always',
   })
 
   if (isPending) {
