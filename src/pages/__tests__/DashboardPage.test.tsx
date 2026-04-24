@@ -61,9 +61,35 @@ const mockDashboardData = {
   ],
 }
 
+// Helper: returns a dispatcher that routes requests by URL so
+// secondary queries (birthday widget + messages panel) don't break.
+function dashboardDispatcher(
+  options: {
+    dashboardData?: unknown
+    birthdays?: unknown
+    messages?: unknown
+  } = {},
+) {
+  return (url: string) => {
+    if (url === '/dashboard') {
+      return Promise.resolve({
+        data: options.dashboardData ?? mockDashboardData,
+      })
+    }
+    if (url === '/customers/birthdays') {
+      return Promise.resolve({ data: { birthdays: options.birthdays ?? [] } })
+    }
+    if (url === '/birthday-messages') {
+      return Promise.resolve({ data: { messages: options.messages ?? [] } })
+    }
+    return Promise.reject(new Error(`unexpected url: ${url}`))
+  }
+}
+
 describe('DashboardPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockGet.mockImplementation(dashboardDispatcher())
   })
 
   it('renders loading state while data is pending', () => {
@@ -73,7 +99,6 @@ describe('DashboardPage', () => {
   })
 
   it('renders metric cards with today totals', async () => {
-    mockGet.mockResolvedValue({ data: mockDashboardData })
     renderDashboard()
     expect(await screen.findByText('Vendas Hoje')).toBeInTheDocument()
     expect(screen.getByText('5')).toBeInTheDocument()
@@ -81,13 +106,11 @@ describe('DashboardPage', () => {
   })
 
   it('renders recent sales table', async () => {
-    mockGet.mockResolvedValue({ data: mockDashboardData })
     renderDashboard()
     expect(await screen.findByText('Maria Silva')).toBeInTheDocument()
   })
 
   it('renders low stock alerts section', async () => {
-    mockGet.mockResolvedValue({ data: mockDashboardData })
     renderDashboard()
     expect(await screen.findByText('Camiseta')).toBeInTheDocument()
     expect(screen.getByText('2')).toBeInTheDocument()
@@ -95,9 +118,11 @@ describe('DashboardPage', () => {
   })
 
   it('shows empty state when no low stock alerts', async () => {
-    mockGet.mockResolvedValue({
-      data: { ...mockDashboardData, lowStockAlerts: [] },
-    })
+    mockGet.mockImplementation(
+      dashboardDispatcher({
+        dashboardData: { ...mockDashboardData, lowStockAlerts: [] },
+      }),
+    )
     renderDashboard()
     expect(await screen.findByText('Nenhum alerta de estoque')).toBeInTheDocument()
   })
