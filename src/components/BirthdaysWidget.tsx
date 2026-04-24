@@ -1,7 +1,9 @@
 import {
   birthdaysResponseSchema,
+  composeBirthdayMessage,
   endOfWeekSunday,
   startOfWeekMonday,
+  storeSettingsResponseSchema,
   type BirthdayItem,
 } from '@bonistore/shared'
 import { useQuery } from '@tanstack/react-query'
@@ -73,15 +75,51 @@ async function fetchBirthdaysRange(from: string, to: string): Promise<BirthdayIt
   return birthdaysResponseSchema.parse(r.data).birthdays
 }
 
+async function fetchStorePhone(): Promise<string | null> {
+  try {
+    const r = await api.get<unknown>('/settings/store')
+    const parsed = storeSettingsResponseSchema.parse(
+      (r.data as { settings: unknown }).settings,
+    )
+    return parsed.lojaTelefone
+  } catch {
+    return null
+  }
+}
+
+function buildWaMeUrl(telefone: string, text: string): string {
+  const d = telefone.replace(/\D/g, '')
+  const full = d.startsWith('55') ? d : `55${d}`
+  return `https://wa.me/${full}?text=${encodeURIComponent(text)}`
+}
+
+const sendBtn: React.CSSProperties = {
+  padding: '0.2rem 0.5rem',
+  background: 'var(--success, #4ade80)',
+  border: 'none',
+  borderRadius: 'var(--radius)',
+  color: 'var(--black)',
+  cursor: 'pointer',
+  fontFamily: 'var(--font-label)',
+  fontSize: '0.65rem',
+  letterSpacing: '0.05em',
+  textTransform: 'uppercase',
+  fontWeight: 600,
+  textDecoration: 'none',
+  display: 'inline-block',
+  marginTop: '0.3rem',
+}
+
 interface DayCellProps {
   iso: string
   label: string
   isToday: boolean
   isPast: boolean
   items: BirthdayItem[]
+  lojaTelefone: string | null
 }
 
-function DayCell({ iso, label, isToday, isPast, items }: DayCellProps) {
+function DayCell({ iso, label, isToday, isPast, items, lojaTelefone }: DayCellProps) {
   return (
     <div
       style={{
@@ -141,30 +179,44 @@ function DayCell({ iso, label, isToday, isPast, items }: DayCellProps) {
         </span>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-          {items.map((b) => (
-            <div key={b.id} style={{ display: 'flex', flexDirection: 'column' }}>
-              <span
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  fontSize: '0.85rem',
-                  color: 'var(--white)',
-                  fontWeight: 500,
-                }}
-              >
-                {b.nome}
-              </span>
-              <span
-                style={{
-                  fontFamily: 'var(--font-body)',
-                  fontSize: '0.7rem',
-                  color: 'var(--gray)',
-                  lineHeight: 1.2,
-                }}
-              >
-                {formatBRPhone(b.telefone)} · Faz {b.idadeCompletando}
-              </span>
-            </div>
-          ))}
+          {items.map((b) => {
+            const hasPhone = b.telefone && b.telefone.replace(/\D/g, '').length >= 10
+            return (
+              <div key={b.id} style={{ display: 'flex', flexDirection: 'column' }}>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-body)',
+                    fontSize: '0.85rem',
+                    color: 'var(--white)',
+                    fontWeight: 500,
+                  }}
+                >
+                  {b.nome}
+                </span>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-body)',
+                    fontSize: '0.7rem',
+                    color: 'var(--gray)',
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {formatBRPhone(b.telefone)} · Faz {b.idadeCompletando}
+                </span>
+                {isToday && hasPhone && (
+                  <a
+                    href={buildWaMeUrl(b.telefone, composeBirthdayMessage(b.nome, lojaTelefone))}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={sendBtn}
+                    title="Abrir WhatsApp com a mensagem de aniversário pré-preenchida"
+                  >
+                    📤 Enviar parabéns
+                  </a>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
@@ -182,6 +234,13 @@ export function BirthdaysWidget() {
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
   })
+
+  const storePhoneQuery = useQuery({
+    queryKey: ['settings', 'store', 'phone'],
+    queryFn: fetchStorePhone,
+    staleTime: 60_000,
+  })
+  const lojaTelefone = storePhoneQuery.data ?? null
 
   const dates = weekDates(from)
   const grouped = new Map<string, BirthdayItem[]>()
@@ -232,6 +291,7 @@ export function BirthdaysWidget() {
               isToday={iso === today}
               isPast={iso < today}
               items={grouped.get(iso) ?? []}
+              lojaTelefone={lojaTelefone}
             />
           ))}
         </div>

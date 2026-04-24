@@ -138,19 +138,31 @@ describe('BirthdaysWidget (weekly)', () => {
 
   it('retry button triggers a refetch', async () => {
     const user = userEvent.setup()
-    mockGet.mockRejectedValueOnce(new Error('network error'))
+    // Primeira chamada ao /customers/birthdays falha; /settings/store também falha (ignored)
+    mockGet.mockImplementation((url: string) => {
+      if (url === '/customers/birthdays') return Promise.reject(new Error('network error'))
+      return Promise.reject(new Error('ignored'))
+    })
     renderWidget()
 
     await screen.findByRole('button', { name: /Tentar novamente/i })
-    expect(mockGet).toHaveBeenCalledTimes(1)
+    const callsBefore = mockGet.mock.calls.filter((c) => c[0] === '/customers/birthdays').length
+    expect(callsBefore).toBe(1)
 
-    mockGet.mockResolvedValueOnce({
-      data: { birthdays: [makeBirthday({ matchedDate: todayISO() })] },
+    // Próxima chamada ao /customers/birthdays resolve com sucesso
+    mockGet.mockImplementation((url: string) => {
+      if (url === '/customers/birthdays') {
+        return Promise.resolve({
+          data: { birthdays: [makeBirthday({ matchedDate: todayISO() })] },
+        })
+      }
+      return Promise.reject(new Error('ignored'))
     })
     await user.click(screen.getByRole('button', { name: /Tentar novamente/i }))
 
     await waitFor(() => {
-      expect(mockGet).toHaveBeenCalledTimes(2)
+      const callsAfter = mockGet.mock.calls.filter((c) => c[0] === '/customers/birthdays').length
+      expect(callsAfter).toBeGreaterThanOrEqual(2)
     })
 
     expect(await screen.findByText('Ana Aniversariante')).toBeInTheDocument()
