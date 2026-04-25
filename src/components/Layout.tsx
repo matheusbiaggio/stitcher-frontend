@@ -84,8 +84,25 @@ export function Layout({ children }: LayoutProps) {
         {/* Logo */}
         <div
           onClick={() => navigate('/')}
-          style={{ padding: '0 1.5rem', marginBottom: '2rem', cursor: 'pointer' }}
+          style={{
+            padding: '0 1.5rem',
+            marginBottom: '2rem',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+          }}
         >
+          <img
+            src="/logo.png"
+            alt="BoniStore"
+            style={{
+              width: '36px',
+              height: '36px',
+              objectFit: 'contain',
+              filter: 'invert(1)',
+            }}
+          />
           <span
             style={{
               fontFamily: 'var(--font-display)',
