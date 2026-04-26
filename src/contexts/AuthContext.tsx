@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
-import { type Role } from '@bonistore/shared'
+import { type DashboardLayout, type Role } from '@bonistore/shared'
 import { api } from '../lib/api'
 
 interface User {
@@ -7,6 +7,7 @@ interface User {
   email: string
   nome: string
   role: Role
+  dashboardLayout: DashboardLayout | null
 }
 
 interface AuthState {
@@ -17,6 +18,7 @@ interface AuthState {
 interface AuthActions {
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
+  setDashboardLayout: (layout: DashboardLayout) => void
 }
 
 const AuthStateContext = createContext<AuthState | null>(null)
@@ -44,9 +46,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
   }, [])
 
+  const setDashboardLayout = useCallback((layout: DashboardLayout) => {
+    setUser((prev) => (prev ? { ...prev, dashboardLayout: layout } : prev))
+  }, [])
+
   return (
     <AuthStateContext.Provider value={{ user, loading }}>
-      <AuthActionsContext.Provider value={{ login, logout }}>
+      <AuthActionsContext.Provider value={{ login, logout, setDashboardLayout }}>
         {children}
       </AuthActionsContext.Provider>
     </AuthStateContext.Provider>

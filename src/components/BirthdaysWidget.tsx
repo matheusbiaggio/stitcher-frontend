@@ -40,6 +40,9 @@ const card: React.CSSProperties = {
   border: '1px solid var(--black4)',
   borderRadius: 'var(--radius-lg)',
   padding: '1.25rem',
+  height: '100%',
+  boxSizing: 'border-box',
+  overflow: 'auto',
 }
 
 const heading: React.CSSProperties = {
