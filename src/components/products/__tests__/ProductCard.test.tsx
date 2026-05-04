@@ -275,6 +275,27 @@ describe('ProductCard sticky add-variant header (M008)', () => {
     expect(screen.getByRole('button', { name: /adicionar/i })).toBeInTheDocument()
   })
 
+  it('renders variants in reverse order (most recently added first)', () => {
+    // Backend retorna createdAt asc → variantes mais antigas primeiro.
+    // No DOM, a UI inverte pra mostrar as mais novas no topo (logo abaixo
+    // do header sticky), facilitando ver a recém-adicionada sem rolar.
+    const productOrdered = {
+      ...product,
+      variants: [
+        { ...variant, id: 'va', tamanho: 'A' }, // mais antiga
+        { ...variant, id: 'vb', tamanho: 'B' },
+        { ...variant, id: 'vc', tamanho: 'C' }, // mais nova
+      ],
+    }
+    renderCard({ productOverride: productOrdered })
+
+    const labelA = screen.getByText('A / Preto')
+    const labelC = screen.getByText('C / Preto')
+    // C (mais recente) precede A (mais antiga) no DOM
+    const relation = labelC.compareDocumentPosition(labelA)
+    expect(relation & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('sticky header appears even when there are many variants (renders before the list)', () => {
     // Produto com 20 variantes — o botão deve continuar acessível no topo.
     const manyVariantsProduct = {

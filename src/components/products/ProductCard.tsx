@@ -413,18 +413,22 @@ export function ProductCard({
         </form>
       )}
 
-      {/* Expanded variant rows */}
+      {/* Expanded variant rows — scroll container limita a ~5-6 variantes
+          visíveis. Lista reordenada pra mostrar as mais novas primeiro,
+          então a recém-adicionada fica logo embaixo do header sticky.
+          Quem quiser ver as antigas rola pra baixo. */}
       {expanded && (
         <div
           style={{
             borderTop: '1px solid var(--black4)',
             background: 'var(--black)',
+            maxHeight: '420px',
+            overflowY: 'auto',
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {/* Sticky header — botão "+ Variante" sempre visível enquanto rola
-                a lista. Sem overflow no ancestor: sticky grudará no topo da
-                viewport até o card sair de vista. */}
+            {/* Sticky dentro do scroll container — gruda no topo enquanto
+                a lista rola. */}
             <div
               style={{
                 position: 'sticky',
@@ -591,7 +595,10 @@ export function ProductCard({
                 Sem variantes.
               </p>
             )}
-            {product.variants.map((variant) => (
+            {/* Renderiza em ordem reversa (createdAt desc): a recém-adicionada
+                aparece primeiro logo abaixo do header sticky. Slice antes do
+                reverse pra não mutar o array original do react-query cache. */}
+            {[...product.variants].reverse().map((variant) => (
               <div key={variant.id}>
                 {/* Variant row */}
                 <div
