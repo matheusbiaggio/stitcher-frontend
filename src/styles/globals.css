@@ -56,41 +56,144 @@ a {
   text-decoration: none;
 }
 
-/* Scrollbar fina alinhada com a paleta dark do site. Aplique a classe
- * .thin-scroll em qualquer container com overflow:auto pra trocar a barra
- * cinza-padrão do navegador por uma versão coerente com o tema.
- *
- * Funciona em WebKit (Chrome/Safari/Edge) via ::-webkit-scrollbar e em
- * Firefox via scrollbar-width/scrollbar-color (precisa dos dois pra cobrir
- * todos os browsers principais). */
-.thin-scroll {
+/* ──────────────────────────────────────────────────────────────────────
+ * Defaults globais alinhados ao tema dark do site.
+ * Customiza tudo que o navegador renderia "branco padrão" e ficaria fora
+ * do estilo: scrollbars, spinners de número, chevron de select, autofill
+ * do Chrome, ícone de date picker, checkbox/radio, seleção, foco e caret.
+ * ────────────────────────────────────────────────────────────────────── */
+
+/* Scrollbar global ─────────────────────────────────────────────────────
+ * Aplicada em qualquer container scrollável. WebKit (Chrome/Safari/Edge)
+ * via ::-webkit-scrollbar, Firefox via scrollbar-width/scrollbar-color. */
+* {
   scrollbar-width: thin;
   scrollbar-color: var(--gray3) transparent;
 }
-
-.thin-scroll::-webkit-scrollbar {
+*::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
-
-.thin-scroll::-webkit-scrollbar-track {
+*::-webkit-scrollbar-track {
   background: transparent;
 }
-
-.thin-scroll::-webkit-scrollbar-thumb {
+*::-webkit-scrollbar-thumb {
   background-color: var(--gray3);
   border-radius: 999px;
-  /* Border transparente cria um "padding" visual em volta do thumb,
-   * deixando ele mais fino e elegante sobre o fundo escuro. */
   border: 2px solid transparent;
   background-clip: padding-box;
   transition: background-color var(--transition);
 }
-
-.thin-scroll::-webkit-scrollbar-thumb:hover {
+*::-webkit-scrollbar-thumb:hover {
   background-color: var(--gray2);
 }
-
-.thin-scroll::-webkit-scrollbar-corner {
+*::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/* Inputs numéricos ─────────────────────────────────────────────────────
+ * Esconde spinners (setinhas ↑↓) que vêm com aparência de OS — fora do
+ * tema dark. O usuário continua tendo as setas do teclado. */
+input[type='number'] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Select dropdown ──────────────────────────────────────────────────────
+ * Substitui o chevron padrão do OS por SVG cinza e remove a aparência
+ * nativa. !important nas regras críticas porque vários selects da app
+ * usam o shorthand inline `background: var(--black3)` que resetaria o
+ * background-image que setamos aqui. (A LISTA de options aberta continua
+ * sendo OS-rendered — só dá pra estilizar o trigger.) */
+select {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 10px center !important;
+  padding-right: 28px !important;
+}
+select:focus {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%23f5f5f5' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/></svg>") !important;
+}
+/* Cor de fundo da option list. Suporte limitado — Chrome/Edge respeitam,
+ * Safari/Firefox renderizam com OS theme. Mas vale aplicar pra cobrir o
+ * que dá. */
+select option {
+  background-color: var(--black3);
+  color: var(--white);
+}
+
+/* Date / time picker icon (Chrome) ─────────────────────────────────────
+ * O ícone de calendário/relógio é renderizado em preto fora do tema —
+ * inverte pra ficar branco com opacidade sutil. */
+input[type='date']::-webkit-calendar-picker-indicator,
+input[type='time']::-webkit-calendar-picker-indicator,
+input[type='datetime-local']::-webkit-calendar-picker-indicator {
+  filter: invert(1) opacity(0.55);
+  cursor: pointer;
+  transition: opacity var(--transition);
+}
+input[type='date']::-webkit-calendar-picker-indicator:hover,
+input[type='time']::-webkit-calendar-picker-indicator:hover,
+input[type='datetime-local']::-webkit-calendar-picker-indicator:hover {
+  filter: invert(1) opacity(1);
+}
+
+/* Checkbox / Radio ────────────────────────────────────────────────────
+ * accent-color é a forma moderna e cross-browser de pintar o estado
+ * "checked" sem perder a forma nativa do controle. */
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--white);
+}
+
+/* Selection (texto selecionado) ───────────────────────────────────────
+ * O default é azul claro do navegador. Combina mais com o tema branco
+ * sobre preto. */
+::selection {
+  background: var(--white);
+  color: var(--black);
+}
+
+/* Focus outline ───────────────────────────────────────────────────────
+ * :focus-visible só ativa em navegação por teclado (Tab/atalhos),
+ * preservando UX de mouse sem anel. Crítico pra acessibilidade. */
+:focus-visible {
+  outline: 2px solid var(--white);
+  outline-offset: 2px;
+}
+
+/* Caret de texto ──────────────────────────────────────────────────────
+ * Em fundo escuro, caret default (preto/azul) some. Forçando branco. */
+input,
+textarea,
+[contenteditable='true'] {
+  caret-color: var(--white);
+}
+
+/* Autofill do Chrome ──────────────────────────────────────────────────
+ * Ao auto-completar, Chrome força fundo amarelo claro e texto preto —
+ * destrói o tema. O hack do box-shadow inset trava no preto do tema. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px var(--black3) inset !important;
+  -webkit-text-fill-color: var(--white) !important;
+  caret-color: var(--white) !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Placeholder ─────────────────────────────────────────────────────────
+ * Garantia de cor consistente em todos os browsers. */
+::placeholder {
+  color: var(--gray2);
+  opacity: 1;
 }
