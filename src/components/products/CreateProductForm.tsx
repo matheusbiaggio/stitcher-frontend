@@ -294,6 +294,7 @@ export function CreateProductForm() {
             // em ordem reversa pra mostrar a recém-adicionada no topo,
             // facilitando preencher sem rolar até o fim.
             <div
+              className="thin-scroll"
               style={{
                 display: 'flex',
                 flexDirection: 'column',

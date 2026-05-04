@@ -419,6 +419,7 @@ export function ProductCard({
           Quem quiser ver as antigas rola pra baixo. */}
       {expanded && (
         <div
+          className="thin-scroll"
           style={{
             borderTop: '1px solid var(--black4)',
             background: 'var(--black)',
