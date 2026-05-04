@@ -1,4 +1,5 @@
 import { PAYMENT_METHODS, type PaymentMethod } from '@bonistore/shared'
+import { useState } from 'react'
 
 import {
   type CartItem,
@@ -9,6 +10,7 @@ import {
   formatMoney,
   itemPrecoUnitario,
 } from '../../utils/cart'
+import { QuickCreateCustomerForm } from './QuickCreateCustomerForm'
 import {
   fieldError,
   input,
@@ -92,6 +94,10 @@ export function Cart({
   onCheckout,
 }: CartProps) {
   const breakdown = cartBreakdown(cart, discountMode, saleDiscount)
+  // Quick-create de cliente sem abandonar a venda. Abre inline quando o
+  // usuário clica "+ Criar cliente" no estado "Nenhum cliente encontrado".
+  // O nome digitado no search vira o nome inicial do form.
+  const [quickCreateOpen, setQuickCreateOpen] = useState(false)
 
   return (
     <section>
@@ -415,12 +421,57 @@ export function Cart({
                   ))}
                 </div>
               )}
-              {customerSearch.length >= 1 && customerResults.length === 0 && (
-                <p
-                  style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.8rem' }}
-                >
-                  Nenhum cliente encontrado
-                </p>
+              {customerSearch.length >= 1 && customerResults.length === 0 && !quickCreateOpen && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <p
+                    style={{
+                      color: 'var(--gray)',
+                      fontFamily: 'var(--font-body)',
+                      fontSize: '0.8rem',
+                    }}
+                  >
+                    Nenhum cliente encontrado
+                  </p>
+                  <button
+                    type="button"
+                    data-testid="quick-create-customer-trigger"
+                    onClick={() => {
+                      setQuickCreateOpen(true)
+                    }}
+                    style={{
+                      alignSelf: 'flex-start',
+                      padding: '0.4rem 0.75rem',
+                      background: 'var(--white)',
+                      border: 'none',
+                      borderRadius: 'var(--radius)',
+                      color: 'var(--black)',
+                      fontFamily: 'var(--font-label)',
+                      fontSize: '0.7rem',
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                    }}
+                  >
+                    + Criar cliente
+                  </button>
+                </div>
+              )}
+              {quickCreateOpen && (
+                <QuickCreateCustomerForm
+                  initialName={customerSearch}
+                  onCreated={(customer) => {
+                    onSelectCustomer({
+                      id: customer.id,
+                      nome: customer.nome,
+                      dataNascimento: customer.dataNascimento,
+                    })
+                    setQuickCreateOpen(false)
+                  }}
+                  onCancel={() => {
+                    setQuickCreateOpen(false)
+                  }}
+                />
               )}
             </>
           )}
