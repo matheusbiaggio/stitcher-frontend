@@ -7,6 +7,12 @@ type Product = ProductResponse
 export interface EditVariantForm {
   tamanho: string
   cor: string
+  /**
+   * Estoque atual em valor absoluto. Substitui o valor existente ao salvar
+   * — pra entradas de mercadoria do dia-a-dia (incremento), use o botão
+   * "Estoque +" que tem fluxo dedicado.
+   */
+  estoque: number | ''
   estoqueMinimo: number | ''
 }
 
@@ -482,6 +488,7 @@ export function ProductCard({
                             form: {
                               tamanho: variant.tamanho,
                               cor: variant.cor,
+                              estoque: variant.estoque,
                               estoqueMinimo: variant.estoqueMinimo,
                             },
                           })
@@ -614,6 +621,28 @@ export function ProductCard({
                           })
                         }}
                         style={{ ...smallInputStyle, width: '100px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>Estoque atual</label>
+                      <input
+                        type="number"
+                        min={0}
+                        step={1}
+                        required
+                        value={editingVariant.form.estoque}
+                        onChange={(e) => {
+                          onEditingVariantChange({
+                            ...editingVariant,
+                            form: {
+                              ...editingVariant.form,
+                              estoque:
+                                e.target.value === '' ? '' : Math.max(0, Math.floor(Number(e.target.value))),
+                            },
+                          })
+                        }}
+                        style={{ ...smallInputStyle, width: '90px' }}
+                        title="Substitui o valor atual. Para entrada de mercadoria, use Estoque +."
                       />
                     </div>
                     <div>

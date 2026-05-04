@@ -205,11 +205,19 @@ export function ProductsPage() {
   function handleEditVariantSubmit(e: FormEvent) {
     e.preventDefault()
     if (!editingVariant) return
+    // Normaliza '' (input limpo durante edit) pra 0 antes de enviar — sem
+    // isso o Zod do backend rejeita por tipo inválido.
+    const { estoque, estoqueMinimo, ...rest } = editingVariant.form
+    const data = {
+      ...rest,
+      estoque: estoque === '' ? 0 : estoque,
+      estoqueMinimo: estoqueMinimo === '' ? 0 : estoqueMinimo,
+    }
     editVariantMutation.mutate(
       {
         productId: editingVariant.productId,
         variantId: editingVariant.variantId,
-        data: editingVariant.form,
+        data,
       },
       {
         onSuccess: () => {
