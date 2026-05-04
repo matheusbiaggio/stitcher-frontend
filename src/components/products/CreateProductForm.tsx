@@ -265,9 +265,12 @@ export function CreateProductForm() {
               marginBottom: '0.5rem',
             }}
           >
-            <label style={{ ...labelStyle, marginBottom: 0 }}>Variantes</label>
+            <label style={{ ...labelStyle, marginBottom: 0 }}>
+              Variantes{form.variants.length > 0 ? ` (${form.variants.length})` : ''}
+            </label>
             <button
               type="button"
+              data-testid="create-product-add-variant-button"
               onClick={addVariantRow}
               style={{
                 padding: '0.25rem 0.625rem',
@@ -287,8 +290,23 @@ export function CreateProductForm() {
           </div>
 
           {form.variants.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {form.variants.map((row, idx) => (
+            // Scroll interno limita a ~5-6 variantes visíveis. Lista renderizada
+            // em ordem reversa pra mostrar a recém-adicionada no topo,
+            // facilitando preencher sem rolar até o fim.
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+                maxHeight: '380px',
+                overflowY: 'auto',
+                padding: '2px',
+              }}
+            >
+              {form.variants
+                .map((row, idx) => ({ row, idx }))
+                .reverse()
+                .map(({ row, idx }) => (
                 <div key={idx}>
                   <div
                     style={{
