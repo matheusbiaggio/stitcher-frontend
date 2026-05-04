@@ -1,5 +1,6 @@
 import { customerResponseSchema } from '@bonistore/shared'
 import { useMutation } from '@tanstack/react-query'
+import dayjs from 'dayjs'
 import { FormEvent, useState } from 'react'
 
 import { api } from '../../lib/api'
@@ -9,6 +10,7 @@ import {
   toCustomerApiBody,
   validateCustomerForm,
 } from '../../utils/customerFormValidation'
+import { maskBRPhone } from '../../utils/formatPhone'
 
 const labelStyle: React.CSSProperties = {
   fontFamily: 'var(--font-label)',
@@ -166,16 +168,20 @@ export function QuickCreateCustomerForm({
         <input
           type="tel"
           inputMode="numeric"
-          value={form.telefone}
+          // O input mostra a máscara progressiva — (11) 99999-9999. O state
+          // guarda o valor mascarado pra preservar caret/UX, e o submit
+          // sanitiza pra dígitos via toCustomerApiBody.
+          value={maskBRPhone(form.telefone)}
           onChange={(e) => {
-            setForm({ ...form, telefone: e.target.value })
+            setForm({ ...form, telefone: maskBRPhone(e.target.value) })
             setErrors((er) => ({ ...er, telefone: undefined }))
           }}
           style={{
             ...inputStyle,
             borderColor: errors.telefone ? 'var(--danger)' : 'var(--black4)',
           }}
-          placeholder="11999999999"
+          placeholder="(11) 99999-9999"
+          maxLength={16}
         />
         {errors.telefone && <p style={errorTextStyle}>{errors.telefone}</p>}
       </div>
@@ -194,6 +200,24 @@ export function QuickCreateCustomerForm({
           placeholder="00000000000"
         />
         {errors.cpf && <p style={errorTextStyle}>{errors.cpf}</p>}
+      </div>
+
+      <div>
+        <label style={labelStyle}>Data de nascimento (opcional)</label>
+        <input
+          type="date"
+          value={form.dataNascimento}
+          onChange={(e) => {
+            setForm({ ...form, dataNascimento: e.target.value })
+            setErrors((er) => ({ ...er, dataNascimento: undefined }))
+          }}
+          style={{
+            ...inputStyle,
+            borderColor: errors.dataNascimento ? 'var(--danger)' : 'var(--black4)',
+          }}
+          max={dayjs().format('YYYY-MM-DD')}
+        />
+        {errors.dataNascimento && <p style={errorTextStyle}>{errors.dataNascimento}</p>}
       </div>
 
       {serverError && <p style={errorTextStyle}>{serverError}</p>}
