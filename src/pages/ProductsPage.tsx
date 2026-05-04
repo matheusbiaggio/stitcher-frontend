@@ -1,6 +1,6 @@
 import { type ProductResponse, productResponseSchema } from '@bonistore/shared'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState, FormEvent } from 'react'
+import { useEffect, useState, FormEvent } from 'react'
 
 import { api } from '../lib/api'
 import { input as inputStyle } from '../styles/ui'
@@ -99,6 +99,28 @@ export function ProductsPage() {
   } | null>(null)
   const [addingVariantTo, setAddingVariantTo] = useState<string | null>(null)
   const [newVariantForm, setNewVariantForm] = useState<NewVariantForm>(NEW_VARIANT_EMPTY)
+
+  // Atalho de teclado N: abre o form de adicionar variante quando há um
+  // produto expandido. Power-user shortcut documentado no tooltip do botão
+  // sticky "+ Variante (N)" em ProductCard.
+  useEffect(() => {
+    if (!expandedId) return
+    function handleKey(e: KeyboardEvent) {
+      if (e.key !== 'n' && e.key !== 'N') return
+      // Não interferir quando o usuário está digitando em um input/textarea
+      // (ex: pesquisa, edit form aberto). Também ignora atalhos com modifier.
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      const target = e.target as HTMLElement | null
+      if (target?.matches('input, textarea, [contenteditable=true]')) return
+      e.preventDefault()
+      setAddingVariantTo(expandedId)
+      setNewVariantForm(NEW_VARIANT_EMPTY)
+    }
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [expandedId])
 
   // Filters
   const [filterSearch, setFilterSearch] = useState('')

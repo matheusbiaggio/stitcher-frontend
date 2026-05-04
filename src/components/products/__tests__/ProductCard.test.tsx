@@ -39,21 +39,26 @@ const product: ProductResponse = {
 interface RenderOpts {
   editingVariant?: { variantId: string; productId: string; form: EditVariantForm } | null
   editingProduct?: { id: string; form: EditProductForm } | null
+  addingVariantTo?: string | null
   onEditingVariantChange?: (
     ev: { variantId: string; productId: string; form: EditVariantForm } | null,
   ) => void
   onEditVariantSubmit?: (e: React.FormEvent) => void
+  onAddingVariantToChange?: (id: string | null) => void
+  productOverride?: ProductResponse
 }
 
 function renderCard(opts: RenderOpts = {}) {
   const onEditingVariantChange = opts.onEditingVariantChange ?? vi.fn()
   const onEditVariantSubmit = opts.onEditVariantSubmit ?? vi.fn()
+  const onAddingVariantToChange = opts.onAddingVariantToChange ?? vi.fn()
   return {
     onEditingVariantChange,
     onEditVariantSubmit,
+    onAddingVariantToChange,
     ...render(
       <ProductCard
-        product={product}
+        product={opts.productOverride ?? product}
         expanded={true}
         onToggleExpand={vi.fn()}
         stockEntry={null}
@@ -69,8 +74,8 @@ function renderCard(opts: RenderOpts = {}) {
         onToggleEditProduct={vi.fn()}
         onUpdateProduct={vi.fn()}
         updateProductMutation={{ isPending: false }}
-        addingVariantTo={null}
-        onAddingVariantToChange={vi.fn()}
+        addingVariantTo={opts.addingVariantTo ?? null}
+        onAddingVariantToChange={onAddingVariantToChange}
         newVariantForm={NEW_VARIANT_EMPTY}
         onNewVariantFormChange={vi.fn()}
         onAddVariantSubmit={vi.fn()}
@@ -219,5 +224,76 @@ describe('ProductCard variant edit form', () => {
     fireEvent.change(input, { target: { value: '' } })
     const lastCall = onEditingVariantChange.mock.calls.at(-1)
     expect(lastCall?.[0]?.form?.estoque).toBe('')
+  })
+})
+
+describe('ProductCard sticky add-variant header (M008)', () => {
+  it('renders the "+ Variante" button at the top of the expanded section', () => {
+    renderCard()
+
+    // O botão sticky tem testid estável.
+    const addButton = screen.getByTestId(`add-variant-button-${product.id}`)
+    expect(addButton).toBeInTheDocument()
+    expect(addButton.textContent).toMatch(/\+ Variante/i)
+  })
+
+  it('shows the keyboard shortcut hint "(N)" inside the button label', () => {
+    renderCard()
+
+    const addButton = screen.getByTestId(`add-variant-button-${product.id}`)
+    expect(addButton.textContent).toContain('(N)')
+  })
+
+  it('exposes a tooltip mentioning the N keyboard shortcut', () => {
+    renderCard()
+
+    const addButton = screen.getByTestId(`add-variant-button-${product.id}`)
+    expect(addButton.getAttribute('title')).toMatch(/N/)
+  })
+
+  it('clicking "+ Variante" calls onAddingVariantToChange with the product id', async () => {
+    const user = userEvent.setup()
+    const onAddingVariantToChange = vi.fn()
+    renderCard({ onAddingVariantToChange })
+
+    await user.click(screen.getByTestId(`add-variant-button-${product.id}`))
+    expect(onAddingVariantToChange).toHaveBeenCalledWith(product.id)
+  })
+
+  it('renders the new variant form (Tamanho/Cor/Estq/Mín) when addingVariantTo matches', () => {
+    renderCard({ addingVariantTo: product.id })
+
+    // O botão "+ Variante" some quando o form abre
+    expect(
+      screen.queryByTestId(`add-variant-button-${product.id}`),
+    ).not.toBeInTheDocument()
+
+    // Os 4 campos do form aparecem
+    expect(screen.getByPlaceholderText('M')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Azul')).toBeInTheDocument()
+    expect(screen.getAllByPlaceholderText('0').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByRole('button', { name: /adicionar/i })).toBeInTheDocument()
+  })
+
+  it('sticky header appears even when there are many variants (renders before the list)', () => {
+    // Produto com 20 variantes — o botão deve continuar acessível no topo.
+    const manyVariantsProduct = {
+      ...product,
+      variants: Array.from({ length: 20 }, (_, i) => ({
+        ...variant,
+        id: `v${i + 1}`,
+        tamanho: String(i + 1),
+      })),
+    }
+    renderCard({ productOverride: manyVariantsProduct })
+
+    const addButton = screen.getByTestId(`add-variant-button-${manyVariantsProduct.id}`)
+    const firstVariantText = screen.getByText('1 / Preto')
+
+    // compareDocumentPosition retorna um bitmask. Quando addButton vem ANTES
+    // do firstVariantText na ordem do DOM, o flag DOCUMENT_POSITION_FOLLOWING
+    // (4) é setado. Sticky precisa estar antes da lista pra grudar no topo.
+    const relation = addButton.compareDocumentPosition(firstVariantText)
+    expect(relation & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 })

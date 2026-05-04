@@ -418,11 +418,174 @@ export function ProductCard({
         <div
           style={{
             borderTop: '1px solid var(--black4)',
-            padding: '0.75rem 1rem',
             background: 'var(--black)',
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {/* Sticky header — botão "+ Variante" sempre visível enquanto rola
+                a lista. Sem overflow no ancestor: sticky grudará no topo da
+                viewport até o card sair de vista. */}
+            <div
+              style={{
+                position: 'sticky',
+                top: 0,
+                background: 'var(--black)',
+                padding: '0.75rem 1rem',
+                borderBottom: '1px solid var(--black4)',
+                zIndex: 2,
+              }}
+            >
+              {addingVariantTo !== product.id ? (
+                <button
+                  data-testid={`add-variant-button-${product.id}`}
+                  onClick={() => {
+                    onAddingVariantToChange(product.id)
+                    onNewVariantFormChange(NEW_VARIANT_EMPTY)
+                  }}
+                  title="Atalho: tecle N (com o produto expandido)"
+                  style={{
+                    padding: '0.3rem 0.75rem',
+                    background: 'transparent',
+                    border: '1px solid var(--black4)',
+                    borderRadius: 'var(--radius)',
+                    color: 'var(--gray)',
+                    fontFamily: 'var(--font-label)',
+                    fontSize: '0.65rem',
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    cursor: 'pointer',
+                  }}
+                >
+                  + Variante <span style={{ opacity: 0.5, marginLeft: '0.4rem' }}>(N)</span>
+                </button>
+              ) : (
+                <form
+                  onSubmit={(e) => {
+                    onAddVariantSubmit(e, product.id)
+                  }}
+                  style={{
+                    display: 'flex',
+                    gap: '0.5rem',
+                    alignItems: 'flex-end',
+                    flexWrap: 'wrap',
+                    padding: '0.5rem 0.75rem',
+                    background: 'var(--black3)',
+                    borderRadius: 'var(--radius)',
+                    border: '1px solid var(--black4)',
+                  }}
+                >
+                  <div>
+                    <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>Tamanho *</label>
+                    <input
+                      type="text"
+                      required
+                      value={newVariantForm.tamanho}
+                      onChange={(e) => {
+                        onNewVariantFormChange({ ...newVariantForm, tamanho: e.target.value })
+                      }}
+                      style={{ ...smallInputStyle, width: '80px' }}
+                      autoFocus
+                      placeholder="M"
+                    />
+                  </div>
+                  <div>
+                    <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>Cor *</label>
+                    <input
+                      type="text"
+                      required
+                      value={newVariantForm.cor}
+                      onChange={(e) => {
+                        onNewVariantFormChange({ ...newVariantForm, cor: e.target.value })
+                      }}
+                      style={{ ...smallInputStyle, width: '100px' }}
+                      placeholder="Azul"
+                    />
+                  </div>
+                  <div>
+                    <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>Estq. inicial</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={newVariantForm.estoque}
+                      onChange={(e) => {
+                        onNewVariantFormChange({
+                          ...newVariantForm,
+                          estoque: e.target.value === '' ? '' : Number(e.target.value),
+                        })
+                      }}
+                      style={{ ...smallInputStyle, width: '70px' }}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>Mín.</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={newVariantForm.estoqueMinimo}
+                      onChange={(e) => {
+                        onNewVariantFormChange({
+                          ...newVariantForm,
+                          estoqueMinimo: e.target.value === '' ? '' : Number(e.target.value),
+                        })
+                      }}
+                      style={{ ...smallInputStyle, width: '60px' }}
+                      placeholder="0"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={addVariantMutation.isPending}
+                    style={{
+                      padding: '0.375rem 0.75rem',
+                      background: 'var(--white)',
+                      color: 'var(--black)',
+                      fontFamily: 'var(--font-label)',
+                      fontSize: '0.65rem',
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      border: 'none',
+                      borderRadius: 'var(--radius)',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                      whiteSpace: 'nowrap',
+                      alignSelf: 'flex-end',
+                    }}
+                  >
+                    {addVariantMutation.isPending ? '...' : 'Adicionar'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onAddingVariantToChange(null)
+                    }}
+                    style={{
+                      padding: '0.375rem 0.5rem',
+                      background: 'transparent',
+                      border: '1px solid var(--black4)',
+                      borderRadius: 'var(--radius)',
+                      color: 'var(--gray)',
+                      fontFamily: 'var(--font-label)',
+                      fontSize: '0.65rem',
+                      cursor: 'pointer',
+                      alignSelf: 'flex-end',
+                    }}
+                  >
+                    ×
+                  </button>
+                </form>
+              )}
+            </div>
+
+            {/* Lista de variantes */}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+                padding: '0.75rem 1rem',
+              }}
+            >
             {product.variants.length === 0 && (
               <p style={{ color: 'var(--gray)', fontFamily: 'var(--font-body)', fontSize: '0.8rem' }}>
                 Sem variantes.
@@ -705,141 +868,6 @@ export function ProductCard({
                 )}
               </div>
             ))}
-
-            {/* Add variant button + inline form */}
-            <div>
-              {addingVariantTo !== product.id ? (
-                <button
-                  onClick={() => {
-                    onAddingVariantToChange(product.id)
-                    onNewVariantFormChange(NEW_VARIANT_EMPTY)
-                  }}
-                  style={{
-                    padding: '0.3rem 0.75rem',
-                    background: 'transparent',
-                    border: '1px solid var(--black4)',
-                    borderRadius: 'var(--radius)',
-                    color: 'var(--gray)',
-                    fontFamily: 'var(--font-label)',
-                    fontSize: '0.65rem',
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                    cursor: 'pointer',
-                    marginTop: product.variants.length > 0 ? '0.25rem' : 0,
-                  }}
-                >
-                  + Variante
-                </button>
-              ) : (
-                <form
-                  onSubmit={(e) => { onAddVariantSubmit(e, product.id) }}
-                  style={{
-                    display: 'flex',
-                    gap: '0.5rem',
-                    alignItems: 'flex-end',
-                    flexWrap: 'wrap',
-                    padding: '0.5rem 0.75rem',
-                    background: 'var(--black3)',
-                    borderRadius: 'var(--radius)',
-                    border: '1px solid var(--black4)',
-                    marginTop: '0.25rem',
-                  }}
-                >
-                  <div>
-                    <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>Tamanho *</label>
-                    <input
-                      type="text"
-                      required
-                      value={newVariantForm.tamanho}
-                      onChange={(e) => { onNewVariantFormChange({ ...newVariantForm, tamanho: e.target.value }) }}
-                      style={{ ...smallInputStyle, width: '80px' }}
-                      autoFocus
-                      placeholder="M"
-                    />
-                  </div>
-                  <div>
-                    <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>Cor *</label>
-                    <input
-                      type="text"
-                      required
-                      value={newVariantForm.cor}
-                      onChange={(e) => { onNewVariantFormChange({ ...newVariantForm, cor: e.target.value }) }}
-                      style={{ ...smallInputStyle, width: '100px' }}
-                      placeholder="Azul"
-                    />
-                  </div>
-                  <div>
-                    <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>Estq. inicial</label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={newVariantForm.estoque}
-                      onChange={(e) => {
-                        onNewVariantFormChange({
-                          ...newVariantForm,
-                          estoque: e.target.value === '' ? '' : Number(e.target.value),
-                        })
-                      }}
-                      style={{ ...smallInputStyle, width: '70px' }}
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <label style={{ ...labelStyle, marginBottom: '0.25rem' }}>Mín.</label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={newVariantForm.estoqueMinimo}
-                      onChange={(e) => {
-                        onNewVariantFormChange({
-                          ...newVariantForm,
-                          estoqueMinimo: e.target.value === '' ? '' : Number(e.target.value),
-                        })
-                      }}
-                      style={{ ...smallInputStyle, width: '60px' }}
-                      placeholder="0"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={addVariantMutation.isPending}
-                    style={{
-                      padding: '0.375rem 0.75rem',
-                      background: 'var(--white)',
-                      color: 'var(--black)',
-                      fontFamily: 'var(--font-label)',
-                      fontSize: '0.65rem',
-                      letterSpacing: '0.1em',
-                      textTransform: 'uppercase',
-                      border: 'none',
-                      borderRadius: 'var(--radius)',
-                      cursor: 'pointer',
-                      fontWeight: 600,
-                      whiteSpace: 'nowrap',
-                      alignSelf: 'flex-end',
-                    }}
-                  >
-                    {addVariantMutation.isPending ? '...' : 'Adicionar'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { onAddingVariantToChange(null) }}
-                    style={{
-                      padding: '0.375rem 0.5rem',
-                      background: 'transparent',
-                      border: '1px solid var(--black4)',
-                      borderRadius: 'var(--radius)',
-                      color: 'var(--gray)',
-                      fontFamily: 'var(--font-label)',
-                      fontSize: '0.65rem',
-                      cursor: 'pointer',
-                      alignSelf: 'flex-end',
-                    }}
-                  >
-                    ×
-                  </button>
-                </form>
-              )}
             </div>
           </div>
         </div>
