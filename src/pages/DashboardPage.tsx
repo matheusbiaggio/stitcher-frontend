@@ -5,7 +5,16 @@ import {
 } from '@bonistore/shared'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+  Label,
+} from 'recharts'
 
 import { BirthdaysWidget } from '../components/BirthdaysWidget'
 import { LembretesWidget } from '../components/LembretesWidget'
@@ -27,6 +36,13 @@ function formatMoney(value: number): string {
 
 function formatChartDate(dia: string): string {
   return new Date(dia).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+}
+
+function formatMonthLabel(yyyyMm: string): string {
+  // 'YYYY-MM' → 'Jan/26'
+  const [y, m] = yyyyMm.split('-')
+  const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+  return `${months[parseInt(m, 10) - 1]}/${y.slice(2)}`
 }
 
 const cardBase: React.CSSProperties = {
@@ -146,6 +162,15 @@ export function DashboardPage() {
 
   const dashboard = data!
 
+  // M010 — meta e progresso. `monthly` é opcional pra back-compat com
+  // backends antigos que ainda não retornavam o campo; quando ausente,
+  // os cards mostram "—" e o gráfico não desenha a linha de meta.
+  const monthlyReceita = dashboard.monthly?.receita ?? 0
+  const monthlyMeta = dashboard.monthly?.meta ?? 0
+  const progressPercent = monthlyMeta > 0 ? Math.min(100, (monthlyReceita / monthlyMeta) * 100) : 0
+  const hitTarget = monthlyMeta > 0 && monthlyReceita >= monthlyMeta
+  const monthlyRevenue = dashboard.monthlyRevenue ?? []
+
   const cards: Record<DashboardCardId, React.ReactNode> = {
     'vendas-hoje': (
       <div style={metricCardBase}>
@@ -157,6 +182,65 @@ export function DashboardPage() {
       <div style={metricCardBase}>
         <p style={metricLabel}>Receita Hoje</p>
         <p style={metricValue}>{formatMoney(dashboard.today.receita)}</p>
+      </div>
+    ),
+    'receita-mes': (
+      <div style={metricCardBase}>
+        <p style={metricLabel}>Receita do mês</p>
+        <p style={metricValue}>
+          {dashboard.monthly ? formatMoney(monthlyReceita) : '—'}
+        </p>
+        {dashboard.monthly && monthlyMeta > 0 && (
+          <p style={{ ...metricLabel, color: 'var(--gray)', marginTop: '0.5rem' }}>
+            {progressPercent.toFixed(0)}% da meta
+          </p>
+        )}
+      </div>
+    ),
+    'meta-mensal': (
+      <div style={metricCardBase}>
+        <p style={metricLabel}>Meta mensal</p>
+        <p style={metricValue}>
+          {dashboard.monthly && monthlyMeta > 0 ? formatMoney(monthlyMeta) : '—'}
+        </p>
+        {dashboard.monthly && monthlyMeta > 0 && (
+          <div style={{ marginTop: '0.6rem' }}>
+            <div
+              style={{
+                height: 6,
+                background: 'var(--black3)',
+                borderRadius: 999,
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                data-testid="meta-progress-bar"
+                style={{
+                  width: `${progressPercent}%`,
+                  height: '100%',
+                  background: hitTarget ? 'var(--success)' : 'var(--white)',
+                  transition: 'width var(--transition)',
+                }}
+              />
+            </div>
+            <p
+              style={{
+                ...metricLabel,
+                marginTop: '0.4rem',
+                color: hitTarget ? 'var(--success)' : 'var(--gray)',
+              }}
+            >
+              {hitTarget
+                ? `+${formatMoney(monthlyReceita - monthlyMeta)} acima da meta`
+                : `Faltam ${formatMoney(monthlyMeta - monthlyReceita)}`}
+            </p>
+          </div>
+        )}
+        {dashboard.monthly && monthlyMeta === 0 && (
+          <p style={{ ...metricLabel, color: 'var(--gray)', marginTop: '0.5rem' }}>
+            Configure em /configuracoes
+          </p>
+        )}
       </div>
     ),
     birthdays: <BirthdaysWidget />,
@@ -188,6 +272,55 @@ export function DashboardPage() {
                 labelFormatter={(label: unknown) => formatChartDate(String(label))}
               />
               <Bar dataKey="receita" fill="#f5f5f5" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    ),
+    'monthly-revenue-chart': (
+      <div style={cardBase}>
+        <h3 style={cardHeading}>Receita Mensal - Últimos 6 Meses</h3>
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={monthlyRevenue}>
+              <XAxis
+                dataKey="mes"
+                tickFormatter={formatMonthLabel}
+                stroke="#888888"
+                tick={{ fontSize: 12, fontFamily: 'var(--font-body)' }}
+              />
+              <YAxis
+                tickFormatter={(v: number) => `R$${v}`}
+                stroke="#888888"
+                tick={{ fontSize: 12, fontFamily: 'var(--font-body)' }}
+              />
+              <Tooltip
+                contentStyle={{
+                  background: '#111111',
+                  border: '1px solid #2a2a2a',
+                  borderRadius: 4,
+                  color: '#f5f5f5',
+                }}
+                formatter={(value: unknown) => [formatMoney(Number(value)), 'Receita']}
+                labelFormatter={(label: unknown) => formatMonthLabel(String(label))}
+              />
+              <Bar dataKey="receita" fill="#f5f5f5" radius={[4, 4, 0, 0]} />
+              {monthlyMeta > 0 && (
+                <ReferenceLine
+                  y={monthlyMeta}
+                  stroke="var(--success)"
+                  strokeDasharray="4 4"
+                  ifOverflow="extendDomain"
+                >
+                  <Label
+                    value={`Meta ${formatMoney(monthlyMeta)}`}
+                    position="insideTopRight"
+                    fill="var(--success)"
+                    fontSize={11}
+                    fontFamily="var(--font-label)"
+                  />
+                </ReferenceLine>
+              )}
             </BarChart>
           </ResponsiveContainer>
         </div>

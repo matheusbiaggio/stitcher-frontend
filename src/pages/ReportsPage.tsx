@@ -48,6 +48,13 @@ interface OverviewData {
     previousVendas: number
     growthPercent: number | null
   }
+  // M010: presente quando o período inclui o mês corrente. Quando ausente
+  // (período inteiramente no passado), nada de meta é exibido.
+  monthlyTargetProgress: {
+    receita: number
+    meta: number
+    percent: number
+  } | null
   dailyRevenue: { dia: string; receita: number; vendas: number }[]
   paymentBreakdown: { formaPagamento: string; total: number; quantidade: number; percent: number }[]
   topCustomers: { id: string; nome: string; totalGasto: number; quantidadeCompras: number }[]
@@ -456,6 +463,57 @@ export function ReportsPage() {
             </p>
           )}
         </div>
+        {overview?.monthlyTargetProgress && overview.monthlyTargetProgress.meta > 0 && (
+          <div
+            style={kpiCard}
+            data-testid="reports-meta-card"
+          >
+            <p style={kpiLabel}>% da meta (mês)</p>
+            <p
+              style={{
+                ...kpiValue,
+                color:
+                  overview.monthlyTargetProgress.percent >= 100
+                    ? 'var(--success)'
+                    : 'var(--white)',
+              }}
+            >
+              {overview.monthlyTargetProgress.percent.toFixed(0)}%
+            </p>
+            <div
+              style={{
+                marginTop: '0.5rem',
+                height: 4,
+                background: 'var(--black3)',
+                borderRadius: 999,
+                overflow: 'hidden',
+              }}
+            >
+              <div
+                style={{
+                  width: `${Math.min(100, overview.monthlyTargetProgress.percent)}%`,
+                  height: '100%',
+                  background:
+                    overview.monthlyTargetProgress.percent >= 100
+                      ? 'var(--success)'
+                      : 'var(--white)',
+                  transition: 'width var(--transition)',
+                }}
+              />
+            </div>
+            <p
+              style={{
+                fontFamily: 'var(--font-label)',
+                fontSize: '0.7rem',
+                color: 'var(--gray)',
+                marginTop: '0.35rem',
+              }}
+            >
+              {formatMoney(overview.monthlyTargetProgress.receita)} /{' '}
+              {formatMoney(overview.monthlyTargetProgress.meta)}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Revenue chart */}

@@ -11,8 +11,11 @@ import { api } from '../lib/api'
 export const DEFAULT_DASHBOARD_LAYOUT: DashboardLayout = [
   { id: 'vendas-hoje', size: 'half', height: 'thin' },
   { id: 'receita-hoje', size: 'half', height: 'thin' },
+  { id: 'receita-mes', size: 'half', height: 'thin' },
+  { id: 'meta-mensal', size: 'half', height: 'thin' },
   { id: 'birthdays', size: 'full', height: 'large' },
   { id: 'daily-revenue-chart', size: 'full', height: 'medium' },
+  { id: 'monthly-revenue-chart', size: 'full', height: 'medium' },
   { id: 'recent-sales', size: 'full', height: 'large' },
   { id: 'low-stock', size: 'full', height: 'large' },
   { id: 'lembretes', size: 'full', height: 'large' },

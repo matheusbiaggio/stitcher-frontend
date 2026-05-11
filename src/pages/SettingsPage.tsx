@@ -2,6 +2,7 @@ import { useState, useEffect, FormEvent } from 'react'
 
 import { ROLES, type Role } from '@bonistore/shared'
 
+import { StoreSettingsSection } from '../components/settings/StoreSettingsSection'
 import { api } from '../lib/api'
 
 const roleLabels: Record<Role, string> = {
@@ -126,6 +127,9 @@ export function SettingsPage() {
       >
         CONFIGURAÇÕES
       </h1>
+
+      {/* M010 — Configurações da loja (meta de receita mensal) */}
+      <StoreSettingsSection />
 
       <div
         style={{
