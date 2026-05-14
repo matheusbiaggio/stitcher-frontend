@@ -1,5 +1,5 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState, FormEvent } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState, FormEvent } from 'react'
 import { productResponseSchema } from '@bonistore/shared'
 
 import { api } from '../../lib/api'
@@ -82,6 +82,26 @@ export function CreateProductForm() {
   const [form, setForm] = useState<ProductFormValues>(FORM_EMPTY)
   const [formErrors, setFormErrors] = useState<FormErrors>({})
 
+  // M012: busca sugestão de SKU baseada em StoreSettings.skuPrefix. Server
+  // retorna null se prefixo não configurado — nesse caso o input fica vazio
+  // (fluxo manual antigo).
+  const nextSkuQuery = useQuery({
+    queryKey: ['next-sku'],
+    queryFn: () =>
+      api.get<{ sku: string | null }>('/products/next-sku').then((r) => r.data.sku),
+  })
+
+  // Auto-fill: quando a sugestão chega e o campo SKU ainda está vazio,
+  // preenche. Não sobrescreve se o usuário já digitou algo. Após criar um
+  // produto, o form é resetado (sku='') E a query é invalidada — o effect
+  // roda de novo com a nova sugestão.
+  useEffect(() => {
+    if (nextSkuQuery.data && form.sku === '') {
+      setForm((f) => (f.sku === '' ? { ...f, sku: nextSkuQuery.data ?? '' } : f))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nextSkuQuery.data])
+
   const createMutation = useMutation({
     mutationFn: (body: Omit<ProductFormValues, 'preco' | 'custo'> & { preco: number; custo: number }) =>
       api.post<{ product: unknown }>('/products', body).then((r) => productResponseSchema.parse(r.data.product)),
@@ -123,6 +143,9 @@ export function CreateProductForm() {
     createMutation.mutate(body, {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['products'] })
+        // M012: refetch next-sku — após criar produto, próxima sugestão
+        // deve incrementar.
+        queryClient.invalidateQueries({ queryKey: ['next-sku'] })
         setForm(FORM_EMPTY)
         setFormErrors({})
       },
