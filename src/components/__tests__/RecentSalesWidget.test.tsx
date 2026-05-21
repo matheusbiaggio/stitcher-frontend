@@ -13,6 +13,8 @@ const sale = (id: string, customer: string | null): Sale => ({
   subtotal: 150,
   desconto: 0,
   descontoMotivo: null,
+  juros: 0,
+  jurosPercent: null,
   total: 150,
   formaPagamento: 'PIX',
   status: 'COMPLETED',

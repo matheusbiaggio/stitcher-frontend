@@ -55,6 +55,10 @@ interface CartProps {
   discountMode: DiscountMode
   saleDiscount: SaleLevelDiscountState
   isBirthdayCustomer: boolean
+  /** M013 — % juros configurado em StoreSettings. 0 esconde a UI. */
+  crediarioJurosPercent: number
+  /** M013 — true quando o caixa marcou "Aplicar juros". */
+  aplicarJurosCrediario: boolean
   errorMsg: string | null
   successMsg: string | null
   isPending: boolean
@@ -64,6 +68,7 @@ interface CartProps {
   onDiscountModeChange: (mode: DiscountMode) => void
   onSaleDiscountChange: (field: keyof SaleLevelDiscountState, value: string) => void
   onSelectPayment: (forma: FormaPagamento) => void
+  onAplicarJurosCrediarioChange: (v: boolean) => void
   onCustomerSearchChange: (value: string) => void
   onSelectCustomer: (customer: SelectedCustomer) => void
   onClearCustomer: () => void
@@ -79,6 +84,8 @@ export function Cart({
   discountMode,
   saleDiscount,
   isBirthdayCustomer,
+  crediarioJurosPercent,
+  aplicarJurosCrediario,
   errorMsg,
   successMsg,
   isPending,
@@ -88,12 +95,20 @@ export function Cart({
   onDiscountModeChange,
   onSaleDiscountChange,
   onSelectPayment,
+  onAplicarJurosCrediarioChange,
   onCustomerSearchChange,
   onSelectCustomer,
   onClearCustomer,
   onCheckout,
 }: CartProps) {
-  const breakdown = cartBreakdown(cart, discountMode, saleDiscount)
+  // M013: juros só são previewados no breakdown quando a forma é CREDIARIO,
+  // o checkbox está marcado e há % configurado. Backend repete a regra.
+  const effectiveJurosPercent =
+    formaPagamento === CREDIARIO && aplicarJurosCrediario && crediarioJurosPercent > 0
+      ? crediarioJurosPercent
+      : undefined
+  const breakdown = cartBreakdown(cart, discountMode, saleDiscount, effectiveJurosPercent)
+  const showJurosCheckbox = formaPagamento === CREDIARIO && crediarioJurosPercent > 0
   // Quick-create de cliente sem abandonar a venda. Abre inline quando o
   // usuário clica "+ Criar cliente" no estado "Nenhum cliente encontrado".
   // O nome digitado no search vira o nome inicial do form.
@@ -307,6 +322,45 @@ export function Cart({
               </button>
             ))}
           </div>
+
+          {/* M013: Juros do crediário — só aparece quando CREDIARIO está
+              selecionado E loja configurou um % > 0. Default desmarcado
+              (caixa precisa marcar conscientemente). */}
+          {showJurosCheckbox && (
+            <label
+              data-testid="aplicar-juros-checkbox-label"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                marginTop: '0.75rem',
+                padding: '0.5rem 0.75rem',
+                background: 'var(--black3)',
+                border: '1px solid var(--black4)',
+                borderRadius: 'var(--radius)',
+                cursor: 'pointer',
+              }}
+            >
+              <input
+                type="checkbox"
+                data-testid="aplicar-juros-checkbox"
+                checked={aplicarJurosCrediario}
+                onChange={(e) => {
+                  onAplicarJurosCrediarioChange(e.target.checked)
+                }}
+                style={{ accentColor: 'var(--white)', cursor: 'pointer' }}
+              />
+              <span
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '0.8rem',
+                  color: 'var(--white)',
+                }}
+              >
+                Aplicar juros de {crediarioJurosPercent.toLocaleString('pt-BR')}% sobre o subtotal
+              </span>
+            </label>
+          )}
         </div>
 
         {/* Customer */}
@@ -565,53 +619,80 @@ export function Cart({
             gap: '0.4rem',
           }}
         >
+          {(breakdown.desconto > 0 || breakdown.juros > 0) && (
+            <div
+              data-testid="breakdown-subtotal-row"
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+            >
+              <span
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '0.8rem',
+                  color: 'var(--gray)',
+                }}
+              >
+                Subtotal
+              </span>
+              <span
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '0.9rem',
+                  color: 'var(--gray)',
+                }}
+              >
+                {formatMoney(breakdown.subtotal)}
+              </span>
+            </div>
+          )}
           {breakdown.desconto > 0 && (
-            <>
-              <div
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+            <div
+              data-testid="breakdown-desconto-row"
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+            >
+              <span
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '0.8rem',
+                  color: 'var(--success, #4ade80)',
+                }}
               >
-                <span
-                  style={{
-                    fontFamily: 'var(--font-body)',
-                    fontSize: '0.8rem',
-                    color: 'var(--gray)',
-                  }}
-                >
-                  Subtotal
-                </span>
-                <span
-                  style={{
-                    fontFamily: 'var(--font-body)',
-                    fontSize: '0.9rem',
-                    color: 'var(--gray)',
-                  }}
-                >
-                  {formatMoney(breakdown.subtotal)}
-                </span>
-              </div>
-              <div
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                Desconto
+              </span>
+              <span
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '0.9rem',
+                  color: 'var(--success, #4ade80)',
+                }}
               >
-                <span
-                  style={{
-                    fontFamily: 'var(--font-body)',
-                    fontSize: '0.8rem',
-                    color: 'var(--success, #4ade80)',
-                  }}
-                >
-                  Desconto
-                </span>
-                <span
-                  style={{
-                    fontFamily: 'var(--font-body)',
-                    fontSize: '0.9rem',
-                    color: 'var(--success, #4ade80)',
-                  }}
-                >
-                  − {formatMoney(breakdown.desconto)}
-                </span>
-              </div>
-            </>
+                − {formatMoney(breakdown.desconto)}
+              </span>
+            </div>
+          )}
+          {breakdown.juros > 0 && (
+            <div
+              data-testid="breakdown-juros-row"
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+            >
+              <span
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '0.8rem',
+                  color: 'var(--warning, #fbbf24)',
+                }}
+              >
+                Juros ({crediarioJurosPercent.toLocaleString('pt-BR')}%)
+              </span>
+              <span
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '0.9rem',
+                  color: 'var(--warning, #fbbf24)',
+                }}
+              >
+                + {formatMoney(breakdown.juros)}
+              </span>
+            </div>
           )}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span

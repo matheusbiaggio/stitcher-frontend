@@ -1,4 +1,9 @@
-import { isBirthdayWeek, productResponseSchema } from '@bonistore/shared'
+import {
+  isBirthdayWeek,
+  productResponseSchema,
+  storeSettingsSchema,
+  type StoreSettings,
+} from '@bonistore/shared'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import timezone from 'dayjs/plugin/timezone'
@@ -44,6 +49,9 @@ export function PdvPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<SelectedCustomer | null>(null)
   const [discountMode, setDiscountMode] = useState<DiscountMode>('none')
   const [saleDiscount, setSaleDiscount] = useState<SaleLevelDiscountState>(SALE_DISCOUNT_EMPTY)
+  // M013: checkbox "Aplicar juros" do crediário. Default false — caixa
+  // precisa marcar conscientemente. Limpa quando muda formaPagamento.
+  const [aplicarJurosCrediario, setAplicarJurosCrediario] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
@@ -82,6 +90,18 @@ export function PdvPage() {
     staleTime: 10_000,
   })
   const customerResults = customersData ?? []
+
+  // M013: lê a configuração da loja pra saber o % de juros do crediário.
+  // staleTime longo — admin não muda config toda hora; caixa fica todo dia no PDV.
+  const { data: storeSettings } = useQuery({
+    queryKey: ['store-settings'],
+    queryFn: async () => {
+      const res = await api.get<{ settings: StoreSettings }>('/settings')
+      return storeSettingsSchema.parse(res.data.settings)
+    },
+    staleTime: 5 * 60 * 1000,
+  })
+  const crediarioJurosPercent = storeSettings?.crediarioJurosPercent ?? 0
 
   const checkoutMutation = useMutation({
     mutationFn: (body: object) => api.post('/sales', body).then((r) => r.data),
@@ -143,7 +163,12 @@ export function PdvPage() {
     setErrorMsg(null)
     setSuccessMsg(null)
 
-    const breakdown = cartBreakdown(cart, discountMode, saleDiscount)
+    // M013: juros só são previewados/enviados quando válidos (CREDIARIO + checkbox + % > 0)
+    const effectiveJurosPercent =
+      formaPagamento === 'CREDIARIO' && aplicarJurosCrediario && crediarioJurosPercent > 0
+        ? crediarioJurosPercent
+        : undefined
+    const breakdown = cartBreakdown(cart, discountMode, saleDiscount, effectiveJurosPercent)
     const error = validateCheckout(
       cart,
       formaPagamento,
@@ -174,6 +199,9 @@ export function PdvPage() {
         motivo: saleDiscount.motivo.trim() === '' ? undefined : saleDiscount.motivo.trim(),
       }
     }
+    if (aplicarJurosCrediario && formaPagamento === 'CREDIARIO') {
+      body.aplicarJurosCrediario = true
+    }
 
     checkoutMutation.mutate(body, {
       onSuccess: () => {
@@ -184,6 +212,7 @@ export function PdvPage() {
         setFormaPagamento(null)
         setDiscountMode('none')
         setSaleDiscount(SALE_DISCOUNT_EMPTY)
+        setAplicarJurosCrediario(false)
         setSuccessMsg('Venda fechada com sucesso!')
         void queryClient.invalidateQueries({ queryKey: ['pdv-catalog'] })
       },
@@ -220,6 +249,8 @@ export function PdvPage() {
           discountMode={discountMode}
           saleDiscount={saleDiscount}
           isBirthdayCustomer={isBirthdayCustomer}
+          crediarioJurosPercent={crediarioJurosPercent}
+          aplicarJurosCrediario={aplicarJurosCrediario}
           errorMsg={errorMsg}
           successMsg={successMsg}
           isPending={checkoutMutation.isPending}
@@ -238,8 +269,12 @@ export function PdvPage() {
             setFormaPagamento(forma)
             setSelectedCustomer(null)
             setCustomerSearch('')
+            // M013: muda pagamento → limpa o flag. Caixa decide explicitamente
+            // por crediário se vai aplicar juros.
+            setAplicarJurosCrediario(false)
             setErrorMsg(null)
           }}
+          onAplicarJurosCrediarioChange={setAplicarJurosCrediario}
           onCustomerSearchChange={setCustomerSearch}
           onSelectCustomer={(c) => {
             setSelectedCustomer(c)

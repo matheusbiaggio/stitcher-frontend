@@ -195,35 +195,35 @@ describe('validateCheckout', () => {
   const cart = [makeCartItem()]
 
   it('returns null for valid checkout (PIX, no customer)', () => {
-    expect(validateCheckout(cart, 'PIX', null, { subtotal: 0, desconto: 0, total: 0 })).toBeNull()
+    expect(validateCheckout(cart, 'PIX', null, { subtotal: 0, desconto: 0, juros: 0, total: 0 })).toBeNull()
   })
 
   it('returns null for valid CREDIARIO with customer', () => {
-    expect(validateCheckout(cart, 'CREDIARIO', 'customer-id', { subtotal: 0, desconto: 0, total: 0 })).toBeNull()
+    expect(validateCheckout(cart, 'CREDIARIO', 'customer-id', { subtotal: 0, desconto: 0, juros: 0, total: 0 })).toBeNull()
   })
 
   it('returns error when cart is empty', () => {
-    expect(validateCheckout([], 'PIX', null, { subtotal: 0, desconto: 0, total: 0 })).toBe('Adicione produtos à sacola')
+    expect(validateCheckout([], 'PIX', null, { subtotal: 0, desconto: 0, juros: 0, total: 0 })).toBe('Adicione produtos à sacola')
   })
 
   it('returns error when no payment method selected', () => {
-    expect(validateCheckout(cart, null, null, { subtotal: 0, desconto: 0, total: 0 })).toBe('Selecione forma de pagamento')
+    expect(validateCheckout(cart, null, null, { subtotal: 0, desconto: 0, juros: 0, total: 0 })).toBe('Selecione forma de pagamento')
   })
 
   it('returns error for CREDIARIO without customer', () => {
-    expect(validateCheckout(cart, 'CREDIARIO', null, { subtotal: 0, desconto: 0, total: 0 })).toBe('Selecione um cliente para Crediário')
+    expect(validateCheckout(cart, 'CREDIARIO', null, { subtotal: 0, desconto: 0, juros: 0, total: 0 })).toBe('Selecione um cliente para Crediário')
   })
 
   it('allows DINHEIRO without customer', () => {
-    expect(validateCheckout(cart, 'DINHEIRO', null, { subtotal: 0, desconto: 0, total: 0 })).toBeNull()
+    expect(validateCheckout(cart, 'DINHEIRO', null, { subtotal: 0, desconto: 0, juros: 0, total: 0 })).toBeNull()
   })
 
   it('allows CARTAO without customer', () => {
-    expect(validateCheckout(cart, 'CARTAO', null, { subtotal: 0, desconto: 0, total: 0 })).toBeNull()
+    expect(validateCheckout(cart, 'CARTAO', null, { subtotal: 0, desconto: 0, juros: 0, total: 0 })).toBeNull()
   })
 
   it('allows PIX with optional customer', () => {
-    expect(validateCheckout(cart, 'PIX', 'customer-id', { subtotal: 0, desconto: 0, total: 0 })).toBeNull()
+    expect(validateCheckout(cart, 'PIX', 'customer-id', { subtotal: 0, desconto: 0, juros: 0, total: 0 })).toBeNull()
   })
 })
 
@@ -334,5 +334,53 @@ describe('cartBreakdown', () => {
     )
     expect(r.desconto).toBe(0)
     expect(r.total).toBe(100)
+  })
+
+  // M013 — juros opcional sobre subtotal
+  it('juros=0 quando jurosPercent undefined', () => {
+    const r = cartBreakdown(
+      [makeCartItem({ precoUnitarioOriginal: 100, quantidade: 1 })],
+      'none',
+      SALE_DISCOUNT_EMPTY,
+    )
+    expect(r.juros).toBe(0)
+    expect(r.total).toBe(100)
+  })
+
+  it('juros=0 quando jurosPercent=0', () => {
+    const r = cartBreakdown(
+      [makeCartItem({ precoUnitarioOriginal: 100, quantidade: 1 })],
+      'none',
+      SALE_DISCOUNT_EMPTY,
+      0,
+    )
+    expect(r.juros).toBe(0)
+    expect(r.total).toBe(100)
+  })
+
+  it('aplica juros 5% sobre subtotal sem desconto', () => {
+    const r = cartBreakdown(
+      [makeCartItem({ precoUnitarioOriginal: 100, quantidade: 2 })],
+      'none',
+      SALE_DISCOUNT_EMPTY,
+      5,
+    )
+    expect(r.subtotal).toBe(200)
+    expect(r.juros).toBe(10)
+    expect(r.total).toBe(210)
+  })
+
+  it('juros incidem sobre subtotal cheio, NÃO sobre (subtotal − desconto)', () => {
+    // subtotal 100, desconto 20%, juros 10% → 100 + 10 − 20 = 90
+    const r = cartBreakdown(
+      [makeCartItem({ precoUnitarioOriginal: 100, quantidade: 1 })],
+      'total',
+      { tipo: 'percent', valor: 20, motivo: '' },
+      10,
+    )
+    expect(r.subtotal).toBe(100)
+    expect(r.desconto).toBe(20)
+    expect(r.juros).toBe(10)
+    expect(r.total).toBe(90)
   })
 })

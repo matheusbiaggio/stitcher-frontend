@@ -98,17 +98,24 @@ export function hasAnyItemDiscount(cart: CartItem[]): boolean {
 export interface CartBreakdown {
   subtotal: number
   desconto: number
+  juros: number
   total: number
 }
 
 /**
- * Computa subtotal/desconto/total do carrinho dada a configuração de desconto.
+ * Computa subtotal/desconto/juros/total do carrinho.
  * subtotal é sempre baseado no preço original (sem desconto).
+ *
+ * M013 — `jurosPercent` opcional: quando passado (> 0) o juros incide sobre
+ * o SUBTOTAL (antes do desconto). Total final = subtotal + juros − desconto.
+ * Caller decide quando passar (no PDV, só quando `formaPagamento=CREDIARIO`
+ * E o checkbox "Aplicar juros" está marcado E o % configurado > 0).
  */
 export function cartBreakdown(
   cart: CartItem[],
   mode: DiscountMode,
   saleDiscount: SaleLevelDiscountState,
+  jurosPercent?: number,
 ): CartBreakdown {
   const subtotal = roundCents(
     cart.reduce((acc, i) => acc + i.precoUnitarioOriginal * i.quantidade, 0),
@@ -129,8 +136,10 @@ export function cartBreakdown(
         : roundCents(saleDiscount.valor)
   }
 
-  const total = Math.max(0, roundCents(subtotal - desconto))
-  return { subtotal, desconto, total }
+  const juros =
+    jurosPercent && jurosPercent > 0 ? roundCents((subtotal * jurosPercent) / 100) : 0
+  const total = Math.max(0, roundCents(subtotal + juros - desconto))
+  return { subtotal, desconto, juros, total }
 }
 
 /** Mantido para compat (renderização rápida do total sem breakdown). */

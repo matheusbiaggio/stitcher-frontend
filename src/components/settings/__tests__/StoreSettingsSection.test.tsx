@@ -29,7 +29,7 @@ describe('StoreSettingsSection', () => {
 
   it('loads and renders both meta and skuPrefix from settings', async () => {
     mockGet.mockResolvedValueOnce({
-      data: { settings: { metaReceitaMensal: 25_000.5, skuPrefix: 'BS' } },
+      data: { settings: { metaReceitaMensal: 25_000.5, skuPrefix: 'BS', crediarioJurosPercent: 0 } },
     })
     renderSection()
 
@@ -42,7 +42,7 @@ describe('StoreSettingsSection', () => {
 
   it('renders empty skuPrefix when null', async () => {
     mockGet.mockResolvedValueOnce({
-      data: { settings: { metaReceitaMensal: 0, skuPrefix: null } },
+      data: { settings: { metaReceitaMensal: 0, skuPrefix: null, crediarioJurosPercent: 0 } },
     })
     renderSection()
     await waitFor(() => {
@@ -69,7 +69,7 @@ describe('StoreSettingsSection', () => {
 
   it('accepts only digits in meta input and formats progressively', async () => {
     mockGet.mockResolvedValueOnce({
-      data: { settings: { metaReceitaMensal: 0, skuPrefix: null } },
+      data: { settings: { metaReceitaMensal: 0, skuPrefix: null, crediarioJurosPercent: 0 } },
     })
     renderSection()
     await waitFor(() => {
@@ -83,7 +83,7 @@ describe('StoreSettingsSection', () => {
 
   it('forces skuPrefix input to uppercase alphanumeric only', async () => {
     mockGet.mockResolvedValueOnce({
-      data: { settings: { metaReceitaMensal: 0, skuPrefix: null } },
+      data: { settings: { metaReceitaMensal: 0, skuPrefix: null, crediarioJurosPercent: 0 } },
     })
     renderSection()
     await waitFor(() => {
@@ -98,7 +98,7 @@ describe('StoreSettingsSection', () => {
 
   it('limits skuPrefix to 10 characters', async () => {
     mockGet.mockResolvedValueOnce({
-      data: { settings: { metaReceitaMensal: 0, skuPrefix: null } },
+      data: { settings: { metaReceitaMensal: 0, skuPrefix: null, crediarioJurosPercent: 0 } },
     })
     renderSection()
     await waitFor(() => {
@@ -112,10 +112,10 @@ describe('StoreSettingsSection', () => {
 
   it('submits both meta and skuPrefix on save', async () => {
     mockGet.mockResolvedValueOnce({
-      data: { settings: { metaReceitaMensal: 0, skuPrefix: null } },
+      data: { settings: { metaReceitaMensal: 0, skuPrefix: null, crediarioJurosPercent: 0 } },
     })
     mockPatch.mockResolvedValueOnce({
-      data: { settings: { metaReceitaMensal: 50_000, skuPrefix: 'BS' } },
+      data: { settings: { metaReceitaMensal: 50_000, skuPrefix: 'BS', crediarioJurosPercent: 0 } },
     })
     renderSection()
     await waitFor(() => {
@@ -130,16 +130,17 @@ describe('StoreSettingsSection', () => {
       expect(mockPatch).toHaveBeenCalledWith('/settings', {
         metaReceitaMensal: 50_000,
         skuPrefix: 'BS',
+        crediarioJurosPercent: 0,
       })
     })
   })
 
   it('sends empty skuPrefix as "" (backend normalizes to null)', async () => {
     mockGet.mockResolvedValueOnce({
-      data: { settings: { metaReceitaMensal: 1000, skuPrefix: 'BS' } },
+      data: { settings: { metaReceitaMensal: 1000, skuPrefix: 'BS', crediarioJurosPercent: 0 } },
     })
     mockPatch.mockResolvedValueOnce({
-      data: { settings: { metaReceitaMensal: 1000, skuPrefix: null } },
+      data: { settings: { metaReceitaMensal: 1000, skuPrefix: null, crediarioJurosPercent: 0 } },
     })
     renderSection()
     await waitFor(() => {
@@ -153,16 +154,17 @@ describe('StoreSettingsSection', () => {
       expect(mockPatch).toHaveBeenCalledWith('/settings', {
         metaReceitaMensal: 1000,
         skuPrefix: '',
+        crediarioJurosPercent: 0,
       })
     })
   })
 
   it('shows "✓ Salvo" briefly after successful submit', async () => {
     mockGet.mockResolvedValueOnce({
-      data: { settings: { metaReceitaMensal: 0, skuPrefix: null } },
+      data: { settings: { metaReceitaMensal: 0, skuPrefix: null, crediarioJurosPercent: 0 } },
     })
     mockPatch.mockResolvedValueOnce({
-      data: { settings: { metaReceitaMensal: 100, skuPrefix: null } },
+      data: { settings: { metaReceitaMensal: 100, skuPrefix: null, crediarioJurosPercent: 0 } },
     })
     renderSection()
     await waitFor(() => {
@@ -179,7 +181,7 @@ describe('StoreSettingsSection', () => {
 
   it('shows server error on patch failure', async () => {
     mockGet.mockResolvedValueOnce({
-      data: { settings: { metaReceitaMensal: 0, skuPrefix: null } },
+      data: { settings: { metaReceitaMensal: 0, skuPrefix: null, crediarioJurosPercent: 0 } },
     })
     mockPatch.mockRejectedValueOnce({
       response: { data: { message: 'Configuração inválida' } },
@@ -195,5 +197,58 @@ describe('StoreSettingsSection', () => {
     await waitFor(() => {
       expect(screen.getByText('Configuração inválida')).toBeInTheDocument()
     })
+  })
+
+  // M013 — juros do crediário
+  it('loads the current crediarioJurosPercent value', async () => {
+    mockGet.mockResolvedValueOnce({
+      data: { settings: { metaReceitaMensal: 0, skuPrefix: null, crediarioJurosPercent: 7.5 } },
+    })
+    renderSection()
+    await waitFor(() => {
+      expect(screen.getByTestId('crediario-juros-input')).toBeInTheDocument()
+    })
+    const input = screen.getByTestId('crediario-juros-input') as HTMLInputElement
+    expect(input.value).toBe('7,5')
+  })
+
+  it('aceita vírgula como separador decimal e envia number ao backend', async () => {
+    mockGet.mockResolvedValueOnce({
+      data: { settings: { metaReceitaMensal: 0, skuPrefix: null, crediarioJurosPercent: 0 } },
+    })
+    mockPatch.mockResolvedValueOnce({
+      data: { settings: { metaReceitaMensal: 0, skuPrefix: null, crediarioJurosPercent: 5.5 } },
+    })
+    renderSection()
+    await waitFor(() => {
+      expect(screen.getByTestId('crediario-juros-input')).toBeInTheDocument()
+    })
+
+    fireEvent.change(screen.getByTestId('crediario-juros-input'), { target: { value: '5,5' } })
+    fireEvent.click(screen.getByTestId('store-settings-save'))
+
+    await waitFor(() => {
+      expect(mockPatch).toHaveBeenCalledWith('/settings', {
+        metaReceitaMensal: 0,
+        skuPrefix: '',
+        crediarioJurosPercent: 5.5,
+      })
+    })
+  })
+
+  it('rejeita juros > 100 com erro inline', async () => {
+    mockGet.mockResolvedValueOnce({
+      data: { settings: { metaReceitaMensal: 0, skuPrefix: null, crediarioJurosPercent: 0 } },
+    })
+    renderSection()
+    await waitFor(() => {
+      expect(screen.getByTestId('crediario-juros-input')).toBeInTheDocument()
+    })
+
+    fireEvent.change(screen.getByTestId('crediario-juros-input'), { target: { value: '150' } })
+    fireEvent.click(screen.getByTestId('store-settings-save'))
+
+    expect(screen.getByText(/Juros.*0 e 100/i)).toBeInTheDocument()
+    expect(mockPatch).not.toHaveBeenCalled()
   })
 })

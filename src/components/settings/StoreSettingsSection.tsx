@@ -33,6 +33,8 @@ export function StoreSettingsSection() {
   const queryClient = useQueryClient()
   const [centavos, setCentavos] = useState('0')
   const [skuPrefix, setSkuPrefix] = useState('')
+  // M013: % de juros do crediário. String pra permitir input ''/'.'/'5,5'.
+  const [jurosPercentInput, setJurosPercentInput] = useState('0')
   const [error, setError] = useState<string | null>(null)
   const [savedFlash, setSavedFlash] = useState(false)
 
@@ -49,15 +51,26 @@ export function StoreSettingsSection() {
     if (query.data) {
       setCentavos(centavosFromBRL(query.data.metaReceitaMensal))
       setSkuPrefix(query.data.skuPrefix ?? '')
+      setJurosPercentInput(
+        query.data.crediarioJurosPercent.toLocaleString('pt-BR', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2,
+        }),
+      )
     }
   }, [query.data])
 
   const mutation = useMutation({
-    mutationFn: async (input: { metaReceitaMensal: number; skuPrefix: string }) => {
+    mutationFn: async (input: {
+      metaReceitaMensal: number
+      skuPrefix: string
+      crediarioJurosPercent: number
+    }) => {
       // Backend trata '' como "desligar" e normaliza pra null.
       const body = updateStoreSettingsSchema.parse({
         metaReceitaMensal: input.metaReceitaMensal,
         skuPrefix: input.skuPrefix,
+        crediarioJurosPercent: input.crediarioJurosPercent,
       })
       const res = await api.patch<{ settings: StoreSettings }>('/settings', body)
       return storeSettingsSchema.parse(res.data.settings)
@@ -92,7 +105,22 @@ export function StoreSettingsSection() {
       setError('Prefixo SKU: 1-10 caracteres maiúsculos ou dígitos')
       return
     }
-    mutation.mutate({ metaReceitaMensal: value, skuPrefix })
+    // M013: aceita '5', '5.5', '5,5' — vírgula é o separador BR.
+    const jurosParsed = Number(jurosPercentInput.replace(',', '.'))
+    if (
+      Number.isNaN(jurosParsed) ||
+      !Number.isFinite(jurosParsed) ||
+      jurosParsed < 0 ||
+      jurosParsed > 100
+    ) {
+      setError('Juros: número entre 0 e 100')
+      return
+    }
+    mutation.mutate({
+      metaReceitaMensal: value,
+      skuPrefix,
+      crediarioJurosPercent: jurosParsed,
+    })
   }
 
   const labelStyle: React.CSSProperties = {
@@ -202,6 +230,35 @@ export function StoreSettingsSection() {
               Quando preenchido, o SKU de produtos novos vira{' '}
               <code>{skuPrefix || 'BS'}</code>
               <code>073</code> (prefixo + sequência) automaticamente. Deixe vazio pra desligar.
+            </p>
+          </div>
+
+          {/* Crediário juros (M013) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <label htmlFor="crediario-juros" style={labelStyle}>
+              Juros do crediário (%)
+            </label>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <input
+                id="crediario-juros"
+                data-testid="crediario-juros-input"
+                type="text"
+                inputMode="decimal"
+                value={jurosPercentInput}
+                onChange={(e) => {
+                  // Aceita dígitos, vírgula e ponto; máx 1 separador.
+                  const cleaned = e.target.value.replace(/[^\d.,]/g, '').slice(0, 6)
+                  setJurosPercentInput(cleaned)
+                  setError(null)
+                }}
+                placeholder="0"
+                style={inputStyle(error?.includes('Juros') ?? false)}
+              />
+              <span style={{ color: 'var(--gray)', fontSize: '0.9rem' }}>%</span>
+            </div>
+            <p style={{ color: 'var(--gray)', fontSize: '0.72rem' }}>
+              Quando &gt; 0, o PDV mostra um checkbox &quot;Aplicar juros&quot; nas vendas em
+              crediário. Caixa decide se cobra. Use 0 pra desligar a feature.
             </p>
           </div>
 
