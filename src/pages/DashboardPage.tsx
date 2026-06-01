@@ -29,13 +29,16 @@ import {
 } from '../dashboard/dashboardLayout'
 import { api } from '../lib/api'
 import { pageTitle } from '../styles/ui'
+import { formatBRShortDate } from '../utils/formatDate'
 
 function formatMoney(value: number): string {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+// M014: usa helper TZ-agnóstico. `new Date(dia)` parseava como UTC midnight,
+// e no navegador SP TZ exibia o dia anterior (1 dia inteiro a menos).
 function formatChartDate(dia: string): string {
-  return new Date(dia).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+  return formatBRShortDate(dia)
 }
 
 function formatMonthLabel(yyyyMm: string): string {

@@ -7,6 +7,7 @@ import { type PaymentMethod } from '@bonistore/shared'
 
 import { api } from '../lib/api'
 import { pageTitle, sectionHeader, input } from '../styles/ui'
+import { formatBRLongDate, formatBRShortDate } from '../utils/formatDate'
 
 interface SaleItem {
   id: string
@@ -96,11 +97,11 @@ function formatDate(iso: string): string {
   })
 }
 
+// M014: helper TZ-agnóstico via regex. `new Date("${iso}T00:00:00")` funciona
+// em SP local mas é frágil — alguns parsers tratam datetime sem TZ marker como
+// UTC (off-by-one em SP). Mudamos pra parse string-only por robustez.
 function formatShortDate(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-  })
+  return formatBRShortDate(iso)
 }
 
 function formatPercent(value: number, decimals = 1): string {
@@ -300,13 +301,9 @@ export function ReportsPage() {
   })
 
   const periodLabel = useMemo(() => {
-    const fmt = (d: string) =>
-      new Date(`${d}T00:00:00`).toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-      })
-    return `${fmt(startDate)} → ${fmt(endDate)}`
+    // M014: parse via regex (formatBRLongDate) é TZ-agnóstico, evita o
+    // mesmo bug que afetava o eixo X do gráfico.
+    return `${formatBRLongDate(startDate)} → ${formatBRLongDate(endDate)}`
   }, [startDate, endDate])
 
   const overview = overviewQuery.data
